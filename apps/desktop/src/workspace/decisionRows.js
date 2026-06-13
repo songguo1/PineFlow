@@ -11,7 +11,6 @@ function listFrom(value) {
 }
 
 function decisionTitle(kind, ui, { hasChoice = false } = {}) {
-  if (kind === "plan") return ui.decisions?.planTitle || "Plan approval";
   if (kind === "clarification") return ui.decisions?.clarificationTitle || "Clarification";
   if (kind === "risk") {
     return hasChoice
@@ -27,10 +26,8 @@ function decisionTitle(kind, ui, { hasChoice = false } = {}) {
 }
 
 function decisionLabel(key, ui) {
-  if (key === "planId") return ui.decisions?.planId || "Plan ID";
   if (key === "goalSource") return ui.decisions?.goalSource || "Goal source";
   if (key === "assumptions") return ui.decisions?.assumptions || "Confirmed assumptions";
-  if (key === "riskPreview") return ui.decisions?.riskPreview || "Risk preview";
   if (key === "intent") return ui.decisions?.intent || "Intent";
   if (key === "choice") return ui.decisions?.choice || "Choice";
   if (key === "slotPatch") return ui.decisions?.slotPatch || "Slot patch";
@@ -86,29 +83,7 @@ function dedupeDecisionRows(rows) {
 function rowsFromReportAudit(result, ui) {
   const payload = result && typeof result === "object" ? result : {};
   const audit = payload.report_audit && typeof payload.report_audit === "object" ? payload.report_audit : {};
-  const plan = payload.plan_context && typeof payload.plan_context === "object" ? payload.plan_context : {};
   const rows = [];
-
-  if (Object.keys(plan).length) {
-    const assumptions = listFrom(plan.approved_assumptions).length ? listFrom(plan.approved_assumptions) : listFrom(plan.assumptions);
-    const risks = listFrom(plan.risk_preview)
-      .map((item) => (item && typeof item === "object" ? item.message || item.code : item))
-      .filter(Boolean);
-    rows.push({
-      id: plan.plan_id || "plan",
-      kind: "plan",
-      status: plan.status || "plan",
-      severity: "info",
-      title: decisionTitle("plan", ui),
-      summary: plan.user_request || plan.plan_id || "",
-      details: compactDetailEntries([
-        [decisionLabel("planId", ui), plan.plan_id],
-        [decisionLabel("goalSource", ui), plan.goal_contract?.source],
-        [decisionLabel("assumptions", ui), assumptions.join("; ")],
-        [decisionLabel("riskPreview", ui), risks.join("; ")],
-      ]),
-    });
-  }
 
   for (const item of listFrom(audit.clarification_decisions)) {
     if (!item || typeof item !== "object") continue;

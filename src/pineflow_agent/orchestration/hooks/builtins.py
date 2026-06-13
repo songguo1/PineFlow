@@ -113,7 +113,7 @@ def _skill_inject_hook(ctx: PromptContext) -> PromptContext:
 
     Priority chain:
     1. Skills explicitly loaded via load_skill steps -> inject their content.
-    2. Skill frontmatter trigger_keywords against user_request -> suggest skill names only.
+    2. Runtime context signals -> suggest skill names only.
     """
     existing = _loaded_skills_from_steps(ctx.previous_steps)
     if existing:

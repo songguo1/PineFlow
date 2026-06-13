@@ -11,7 +11,7 @@ import {
   isLikelyTauri,
   setApiKeySecret,
 } from "../shared/tauriBridge.js";
-import { normalizeProviderValue } from "../providers/providerCatalog.js";
+import { defaultBaseUrlForProvider, normalizeProviderValue } from "../providers/providerCatalog.js";
 
 const SETTINGS_KEY = "qgis.agent.desktop.settings.v1";
 const API_KEY_STORAGE_KEY = "qgis.agent.desktop.secret.apiKey.v1";
@@ -97,11 +97,22 @@ export function useAppSettings() {
     persistApiKey();
   }, [apiKey, secretReady]);
 
-  function updateSetting(key, value) {
-    setSettings((current) => ({
-      ...current,
-      [key]: key === "provider" ? normalizeProviderValue(value) : value,
-    }));
+function updateSetting(key, value) {
+    setSettings((current) => {
+      if (key !== "provider") {
+        return { ...current, [key]: value };
+      }
+      const provider = normalizeProviderValue(value);
+      if (provider === current.provider) {
+        return current;
+      }
+      return {
+        ...current,
+        provider,
+        baseUrl: defaultBaseUrlForProvider(provider),
+        model: "",
+      };
+    });
   }
 
   function updateApiKey(value) {

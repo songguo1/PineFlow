@@ -31,6 +31,7 @@ class PromptAssembler:
         steps: list[ReActStep],
         session_memory: str = "",
         artifacts: list[dict[str, Any]] | None = None,
+        run_context: dict[str, Any] | None = None,
     ) -> tuple[ActionPlan, ToolDisclosureController]:
         tool_disclosure = ToolDisclosureController.from_steps(
             steps,
@@ -53,6 +54,7 @@ class PromptAssembler:
             loaded_skills=[],
             session_memory=session_memory,
             artifacts=list(artifacts or []),
+            run_context=dict(run_context or {}),
         )
         self.hooks.emit(HookPoint.BEFORE_PROMPT_BUILD, prompt_ctx)
 
@@ -65,6 +67,7 @@ class PromptAssembler:
             tool_disclosure=prompt_ctx.tool_disclosure,
             artifacts=prompt_ctx.artifacts,
             session_memory=prompt_ctx.session_memory,
+            run_context=prompt_ctx.run_context,
             loaded_skills=prompt_ctx.loaded_skills,
             skill_hints=list(prompt_ctx.data.get("skill_hints") or []),
             suggested_skills=list(prompt_ctx.data.get("suggested_skills") or []),

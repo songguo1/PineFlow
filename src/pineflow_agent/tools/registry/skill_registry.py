@@ -21,8 +21,6 @@ class SkillMeta:
     name: str
     description: str
     requires_toolkits: tuple[str, ...] = ()
-    trigger_keywords: tuple[str, ...] = ()
-    intent_patterns: tuple[str, ...] = ()
     workspace_attention: tuple[str, ...] = ()
     risk_awareness: tuple[str, ...] = ()
     strategy_guidance: tuple[str, ...] = ()
@@ -40,8 +38,6 @@ class SkillMeta:
             "name": self.name,
             "description": self.description,
             "requires_toolkits": list(self.requires_toolkits),
-            "trigger_keywords": list(self.trigger_keywords),
-            "intent_patterns": list(self.intent_patterns),
             "workspace_attention": list(self.workspace_attention),
             "risk_awareness": list(self.risk_awareness),
             "strategy_guidance": list(self.strategy_guidance),
@@ -66,8 +62,6 @@ def _parse_skill(path: Path) -> SkillMeta | None:
     name = path.stem
     description = ""
     requires_toolkits: tuple[str, ...] = ()
-    trigger_keywords: tuple[str, ...] = ()
-    intent_patterns: tuple[str, ...] = ()
     workspace_attention: tuple[str, ...] = ()
     risk_awareness: tuple[str, ...] = ()
     strategy_guidance: tuple[str, ...] = ()
@@ -87,8 +81,6 @@ def _parse_skill(path: Path) -> SkillMeta | None:
             name = str(data.get("name") or name).strip() or name
             description = str(data.get("description") or "").strip()
             requires_toolkits = _parse_string_list(data.get("requires_toolkits"))
-            trigger_keywords = _parse_string_list(data.get("trigger_keywords"))
-            intent_patterns = _parse_string_list(data.get("intent_patterns"))
             workspace_attention = _parse_string_list(data.get("workspace_attention"))
             risk_awareness = _parse_string_list(data.get("risk_awareness"))
             strategy_guidance = _parse_string_list(data.get("strategy_guidance"))
@@ -110,8 +102,6 @@ def _parse_skill(path: Path) -> SkillMeta | None:
         name=name,
         description=description,
         requires_toolkits=requires_toolkits,
-        trigger_keywords=trigger_keywords,
-        intent_patterns=intent_patterns,
         workspace_attention=workspace_attention,
         risk_awareness=risk_awareness,
         strategy_guidance=strategy_guidance,
@@ -229,22 +219,6 @@ class SkillRegistry:
             return ()
         return meta.requires_toolkits
 
-    def match_keywords(self, user_request: str) -> list[str]:
-        """Return skill names whose trigger_keywords match the user request.
-
-        Returns empty list if no skills match, or a ranked list of matching skill names.
-        """
-        if not user_request or not self._skills:
-            return []
-        request_lower = user_request.lower()
-        scored: list[tuple[int, str]] = []
-        for meta in self._skills.values():
-            score = sum(1 for kw in meta.trigger_keywords if kw.lower() in request_lower)
-            if score > 0:
-                scored.append((score, meta.name))
-        scored.sort(key=lambda item: item[0], reverse=True)
-        return [name for _, name in scored]
-
     def suggest(
         self,
         user_request: str,
@@ -253,13 +227,7 @@ class SkillRegistry:
         context: SkillActivationContext | None = None,
     ) -> list[dict[str, Any]]:
         if context is None:
-            names = _dedupe_skill_names(list(self.match_keywords(user_request)))
-            result: list[dict[str, Any]] = []
-            for name in names[: max(1, int(limit or 3))]:
-                meta = self.get(name)
-                if meta is not None:
-                    result.append(meta.to_dict())
-            return result
+            return []
 
         scored: list[tuple[int, str, dict[str, Any]]] = []
         for meta in self._skills.values():

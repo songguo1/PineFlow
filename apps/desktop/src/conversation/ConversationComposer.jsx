@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUp, Ban, ChevronDown, FolderOpen, Loader2, Pause, Plus, ShieldCheck } from "lucide-react";
+import { ArrowUp, Ban, FolderOpen, Loader2, Pause, Plus } from "lucide-react";
 
 import { isLikelyTauri, pickDirectory } from "../shared/tauriBridge.js";
 
@@ -22,9 +22,6 @@ export function ConversationComposer({
   onPause,
   onCancelRun,
   onCancelPending,
-  onTogglePlanMode,
-  planMode = false,
-  planningBusy = false,
   llmSettings,
   onError,
 }) {
@@ -111,18 +108,6 @@ export function ConversationComposer({
             >
               <Plus size={20} />
             </button>
-            {!hasPendingInteraction && !runState.isRunning ? (
-              <button
-                className={`composer-review-button ${planMode ? "active" : ""}`}
-                type="button"
-                onClick={onTogglePlanMode}
-                title={planMode ? ui.actions.planModeActive : ui.actions.planMode}
-              >
-                <ShieldCheck size={15} />
-                <span>{ui.composer.autoReview || ui.actions.planMode}</span>
-                <ChevronDown size={14} />
-              </button>
-            ) : null}
           </div>
           <div className="composer-actions">
             {runState.isRunning ? (
@@ -151,10 +136,10 @@ export function ConversationComposer({
               className="composer-send-button"
               type="button"
               onClick={handlePrimaryAction}
-              disabled={runState.isRunning || isAwaitingConfirmation || planningBusy}
-              title={composerLabel(runState.status, resumeMode, editableMissingSlots.length, allowedActions, ui, planMode)}
+              disabled={runState.isRunning || isAwaitingConfirmation}
+              title={composerLabel(runState.status, resumeMode, editableMissingSlots.length, allowedActions, ui)}
             >
-              {runState.isRunning || planningBusy ? <Loader2 className="spin" size={18} /> : <ArrowUp size={22} />}
+              {runState.isRunning ? <Loader2 className="spin" size={18} /> : <ArrowUp size={22} />}
             </button>
           </div>
         </div>
@@ -281,12 +266,11 @@ function summarizeSlotPatch(slotPatch, ui) {
   return ui.resume.patchSummary.replace("{patch}", parts.join("; "));
 }
 
-function composerLabel(status, resumeMode, missingCount, allowedActions, ui, planMode) {
+function composerLabel(status, resumeMode, missingCount, allowedActions, ui) {
   if (status === "pause_requested" || status === "cancel_requested") return ui.actions.waiting;
   if (status === "awaiting_confirmation") return ui.actions.waiting;
   if (status === "awaiting_user" && resumeMode === "patch" && allowedActions.includes("patch") && missingCount) return ui.actions.submitPatch;
   if (status === "awaiting_user" && allowedActions.includes("replan")) return ui.actions.replan;
-  if (planMode) return ui.actions.generatePlan;
   return ui.actions.send;
 }
 

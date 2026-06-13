@@ -130,7 +130,7 @@ function normalizeVisibleRunSnapshot(run) {
     quality_findings: Array.isArray(run.quality_findings) ? run.quality_findings : [],
     report_audit: run.report_audit && typeof run.report_audit === "object" ? run.report_audit : {},
     decision_rows: Array.isArray(run.decision_rows) ? run.decision_rows : [],
-    result: stripTranscriptPayload(result),
+    result,
     updated_at: String(run.updated_at || ""),
   };
 }

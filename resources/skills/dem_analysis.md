@@ -2,7 +2,6 @@
 name: dem_analysis
 description: "DEM 地形分析：坡度、坡向、山体阴影。当用户需要对 DEM 做地形分析时，必须先加载此技能。"
 requires_toolkits: [raster]
-trigger_keywords: ["坡度", "slope", "坡向", "aspect", "山体阴影", "hillshade", "地形", "terrain", "dem", "高程"]
 max_chars: 800
 ---
 

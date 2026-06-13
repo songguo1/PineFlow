@@ -75,19 +75,8 @@ def build_skill_activation_context(
 
 
 def activation_for_skill(meta: Any, context: SkillActivationContext) -> dict[str, Any]:
-    request = context.user_request.lower()
     score = 0
     reasons: list[str] = []
-
-    keyword_hits = _text_hits(request, getattr(meta, "trigger_keywords", ()))
-    if keyword_hits:
-        score += 3 * len(keyword_hits)
-        reasons.append("matched trigger keywords: " + ", ".join(keyword_hits[:4]))
-
-    intent_hits = _intent_hits(request, getattr(meta, "intent_patterns", ()))
-    if intent_hits:
-        score += 4 * len(intent_hits)
-        reasons.append("matched intent patterns: " + ", ".join(intent_hits[:3]))
 
     required_toolkits = tuple(getattr(meta, "requires_toolkits", ()) or ())
     toolkit_hits = [item for item in required_toolkits if item in set(context.active_toolkits)]
@@ -114,8 +103,6 @@ def activation_for_skill(meta: Any, context: SkillActivationContext) -> dict[str
         {
             "score": score,
             "reasons": reasons,
-            "matched_keywords": keyword_hits,
-            "matched_intents": intent_hits,
             "matched_risks": risk_hits,
             "workspace_hits": list(dict.fromkeys(attention_hits + query_hits)),
             "workflow_stage": context.workflow_stage,
@@ -127,9 +114,8 @@ def should_activate_skill(activation: dict[str, Any]) -> bool:
     if int(activation.get("score") or 0) <= 0:
         return False
     return bool(
-        list(activation.get("matched_keywords") or [])
-        or list(activation.get("matched_intents") or [])
-        or list(activation.get("matched_risks") or [])
+        list(activation.get("matched_risks") or [])
+        or list(activation.get("workspace_hits") or [])
     )
 
 
@@ -205,22 +191,6 @@ def _attention_signals(*, layers: tuple[dict[str, Any], ...], artifacts: tuple[d
     if risk_codes:
         signals.append("risks")
     return list(dict.fromkeys(signals))
-
-
-def _text_hits(request: str, values: tuple[str, ...]) -> list[str]:
-    return [item for item in values if str(item or "").strip() and str(item).lower() in request]
-
-
-def _intent_hits(request: str, values: tuple[str, ...]) -> list[str]:
-    hits: list[str] = []
-    for value in values:
-        text = str(value or "").strip()
-        if not text:
-            continue
-        variants = {text.lower(), text.replace("_", " ").lower()}
-        if any(variant and variant in request for variant in variants):
-            hits.append(text)
-    return hits
 
 
 def _workspace_query_hits(queries: tuple[dict[str, Any], ...], context: SkillActivationContext) -> list[str]:

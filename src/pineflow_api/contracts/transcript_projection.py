@@ -284,6 +284,7 @@ def _canonical_event_name(event_name: str, event_type: str) -> str:
         "empty_result",
         "before_export",
         "repair_success",
+        "review",
         "question",
         "confirmation",
         "repair",

@@ -13,7 +13,6 @@ from pineflow_agent.core.models import AgentResult, ReActStep, react_steps_from_
 
 @dataclass
 class ReportAudit:
-    plan_context: dict[str, Any] = field(default_factory=dict)
     executed_tools: list[dict[str, Any]] = field(default_factory=list)
     artifacts: list[dict[str, Any]] = field(default_factory=list)
     warnings: list[dict[str, Any]] = field(default_factory=list)
@@ -28,7 +27,6 @@ class ReportAudit:
     def to_dict(self) -> dict[str, Any]:
         return normalize_report_audit(
             {
-                "plan_context": self.plan_context,
                 "executed_tools": self.executed_tools,
                 "artifacts": self.artifacts,
                 "warnings": self.warnings,
@@ -54,7 +52,6 @@ class ReportAuditCollector:
         artifact_outputs: list[dict[str, Any]] | None = None,
     ) -> ReportAudit:
         audit = ReportAudit(
-            plan_context=make_json_safe(dict(getattr(result, "plan_context", None) or {})),
             artifacts=_artifact_records(list(artifact_outputs or [])),
             quality_findings=_dict_items(list(result.quality_findings or [])),
         )
@@ -111,8 +108,6 @@ def build_report_audit_from_payload(
         errors=make_json_safe(list(payload.get("errors") or [])),
         next_question=str(payload.get("next_question") or ""),
         goal_contract=make_json_safe(dict(payload.get("goal_contract") or {})),
-        plan_id=str(payload.get("plan_id") or ""),
-        plan_context=make_json_safe(dict(payload.get("plan_context") or {})),
         quality_findings=_dict_items(list(payload.get("quality_findings") or [])),
     )
     return build_report_audit_dict(
@@ -125,7 +120,6 @@ def build_report_audit_from_payload(
 def normalize_report_audit(value: Any) -> dict[str, Any]:
     payload = make_json_safe(dict(value or {})) if isinstance(value, dict) else {}
     return {
-        "plan_context": make_json_safe(dict(payload.get("plan_context") or {})),
         "executed_tools": _dict_items(list(payload.get("executed_tools") or [])),
         "artifacts": _dict_items(list(payload.get("artifacts") or [])),
         "warnings": _dict_items(list(payload.get("warnings") or [])),

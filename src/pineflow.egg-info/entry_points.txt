@@ -1,0 +1,3 @@
+[console_scripts]
+pineflow-agent = pineflow_agent.__main__:main
+pineflow-api = pineflow_api.entrypoints.__main__:main

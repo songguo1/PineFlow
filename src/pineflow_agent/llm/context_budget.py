@@ -8,6 +8,7 @@ is allowed to consume.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
 from typing import Any
 
 
@@ -63,6 +64,36 @@ def estimate_tokens(text: str) -> int:
     return int(cjk_chars / 1.5 + ascii_chars / 4.0)
 
 
+def build_context_budget_report(payload: dict[str, Any], *, max_tokens: int = 6000) -> dict[str, Any]:
+    """Return a rough token report for prompt payload sections."""
+    sections: dict[str, dict[str, int]] = {}
+    total = 0
+    for key, value in dict(payload or {}).items():
+        text = _section_text(value)
+        tokens = estimate_tokens(text)
+        total += tokens
+        sections[str(key)] = {
+            "estimated_tokens": tokens,
+            "chars": len(text),
+        }
+    return {
+        "estimated_total_tokens": total,
+        "max_tokens": max_tokens,
+        "remaining_tokens": max(0, max_tokens - total),
+        "over_budget": total > max_tokens,
+        "sections": sections,
+    }
+
+
+def _section_text(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    try:
+        return json.dumps(value, ensure_ascii=False, default=str, sort_keys=True)
+    except Exception:
+        return str(value)
+
+
 def budget_for_prompt(
     *,
     user_request: str = "",
@@ -74,7 +105,6 @@ def budget_for_prompt(
     outputs: list[dict[str, Any]] | None = None,
 ) -> ContextBudget:
     """Convenience factory: creates a budget and trims all provided sections inline."""
-    import json
     budget = ContextBudget()
 
     def _json_len(obj: Any) -> int:

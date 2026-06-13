@@ -24,17 +24,15 @@ Choose intent:
 - chat: conversational message that does not need GIS state or GIS execution.
 - gis_answer: read-only question about the current GIS session state.
 - gis_execute: request that should enter the GIS tool-use runtime.
-- session_control: explicit request to reset or cancel the session. Ambiguous continuation phrases such as "continue", "resume", "继续任务", or "继续执行" are gis_execute, not session_control.
 
 For gis_answer choose answer_type:
 fields, layers, crs, outputs, last_step, summary, or none.
 
-Use gis_execute when unsure. Do not block possible GIS work. Never reset unless the user explicitly asks to reset or clear the session.
+Use gis_execute when unsure. Do not block possible GIS work. Session reset/cancel is handled by slash commands, not natural-language triage.
 """
 
-VALID_INTENTS: set[str] = {"chat", "gis_answer", "gis_execute", "session_control"}
+VALID_INTENTS: set[str] = {"chat", "gis_answer", "gis_execute"}
 VALID_ANSWER_TYPES: set[str] = {"fields", "layers", "crs", "outputs", "last_step", "summary", "none"}
-VALID_CONTROL_ACTIONS: set[str] = {"reset", "cancel", ""}
 
 
 class TriageRouter:
@@ -83,19 +81,14 @@ def _intent_from_payload(payload: dict[str, Any]) -> TurnIntent:
     answer_type = str(payload.get("answer_type") or "none").strip()
     if answer_type not in VALID_ANSWER_TYPES:
         answer_type = "none"
-    control_action = str(payload.get("control_action") or "").strip()
-    if control_action not in VALID_CONTROL_ACTIONS:
-        control_action = ""
     confidence = _confidence(payload.get("confidence"))
     if intent == "gis_answer" and answer_type == "none":
         answer_type = "summary"
-    if intent == "session_control" and not control_action:
-        intent = "gis_execute"
     return TurnIntent(
         kind=intent,  # type: ignore[arg-type]
         reason=str(payload.get("reason") or "llm_triage"),
         answer_type=answer_type,  # type: ignore[arg-type]
-        control_action=control_action,
+        control_action="",
         confidence=confidence,
         message=str(payload.get("message") or "").strip(),
     )
@@ -123,9 +116,8 @@ def _triage_payload(*, message: str, session_state: SessionState) -> dict[str, A
         "layers": make_json_safe(layers),
         "outputs": make_json_safe(outputs),
         "response_schema": {
-            "intent": "chat | gis_answer | gis_execute | session_control",
+            "intent": "chat | gis_answer | gis_execute",
             "answer_type": "fields | layers | crs | outputs | last_step | summary | none",
-            "control_action": "reset | cancel | empty string",
             "confidence": "number from 0 to 1",
             "reason": "short reason",
             "message": "short user-facing message only for chat",

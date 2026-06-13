@@ -70,7 +70,7 @@ class RunCommandService:
             route_kind=route.kind,
             message=route.message_content or request.message,
         )
-        request = self._attach_run_context(request, run)
+        request = self._attach_run_context(request, run, route, intent)
         if self.bootstrap_prepared is not None:
             self.bootstrap_prepared(route, request, run, intent)
         return PreparedRun(route=route, request=request, run=run, intent=intent)
@@ -142,11 +142,15 @@ class RunCommandService:
         return summary
 
     @staticmethod
-    def _attach_run_context(request: QGISAgentRequest, run: RunContext) -> QGISAgentRequest:
-        context = dict(request.options.plan_context or {})
-        context["executed_run_id"] = run.run_id
-        context["status"] = "executed"
-        options = request.options.model_copy(update={"plan_context": context})
+    def _attach_run_context(
+        request: QGISAgentRequest,
+        run: RunContext,
+        route: TurnRoute,
+        intent: TurnIntent | None,
+    ) -> QGISAgentRequest:
+        del route, intent
+        context = {"source_run_id": run.run_id, "status": "executed"}
+        options = request.options.model_copy(update={"run_context": context})
         return request.model_copy(update={"options": options})
 
     def _validate_pending_id(self, run_id: str, action: RunControlAction) -> None:

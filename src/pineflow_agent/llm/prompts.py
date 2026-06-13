@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Any
 
 from pineflow_agent.core.json_safety import make_json_safe
+from pineflow_agent.llm.context_budget import ContextBudget, build_context_budget_report
 from pineflow_agent.llm.context_builder import build_workspace_snapshot, compact_observation, compact_state_tree, compact_steps
+from pineflow_agent.llm.step_context_pack import build_step_context_pack, compact_steps_for_prompt
 from pineflow_agent.tools.contracts.tool_definitions import action_contracts, action_contracts_for
 
 
@@ -107,6 +109,7 @@ def build_react_prompt(
     tool_disclosure: dict[str, Any] | None = None,
     artifacts: list[dict[str, Any]] | None = None,
     session_memory: str = "",
+    run_context: dict[str, Any] | None = None,
     loaded_skills: list[dict[str, Any]] | None = None,
     skill_hints: list[str] | None = None,
     suggested_skills: list[dict[str, Any]] | None = None,
@@ -115,10 +118,10 @@ def build_react_prompt(
     recent_artifacts = artifact_outputs_for_prompt(artifacts or [])
     if already_compacted:
         compact_state = dict(state or {})
-        compact_previous_steps = list(previous_steps or [])
+        compact_previous_steps = compact_steps_for_prompt(list(previous_steps or []))
     else:
         compact_state = compact_state_tree(state)
-        compact_previous_steps = compact_steps(previous_steps)
+        compact_previous_steps = compact_steps_for_prompt(compact_steps(previous_steps))
     recent_output_steps = compact_previous_steps if already_compacted else previous_steps
     recent_outputs = output_layers_from_steps(recent_output_steps)
     if visible_action_contracts is not None:
@@ -144,6 +147,13 @@ def build_react_prompt(
             artifacts=list(artifacts or []),
             tool_disclosure=dict(tool_disclosure or {}),
             suggested_skills=list(suggested_skills or []),
+        ),
+        "step_context_pack": build_step_context_pack(
+            user_request=user_request,
+            state=compact_state,
+            previous_steps=compact_previous_steps,
+            artifacts=list(artifacts or []),
+            run_context=dict(run_context or {}),
         ),
         "available_layers": make_json_safe(available_layers(compact_state)),
         "visible_tools": tool_names,
@@ -191,7 +201,6 @@ def build_react_prompt(
                     "name": str(skill.get("name") or ""),
                     "description": str(skill.get("description") or ""),
                     "requires_toolkits": list(skill.get("requires_toolkits") or []),
-                    "intent_patterns": list(skill.get("intent_patterns") or []),
                     "workspace_attention": list(skill.get("workspace_attention") or []),
                     "risk_awareness": list(skill.get("risk_awareness") or []),
                     "strategy_guidance": list(skill.get("strategy_guidance") or []),
@@ -239,6 +248,10 @@ def build_react_prompt(
         payload["loaded_skills"] = make_json_safe(
             [{"name": skill.get("name"), "content": skill.get("content")} for skill in loaded_skills if isinstance(skill, dict)]
         )
+    payload["context_budget_report"] = build_context_budget_report(
+        {key: value for key, value in payload.items() if key != "context_budget_report"},
+        max_tokens=ContextBudget().max_tokens,
+    )
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
@@ -249,7 +262,6 @@ def _skill_prompt_metadata(skill: dict[str, Any]) -> dict[str, Any]:
         "requires_toolkits": list(skill.get("requires_toolkits") or []),
     }
     keys = (
-        "intent_patterns",
         "workspace_attention",
         "risk_awareness",
         "strategy_guidance",

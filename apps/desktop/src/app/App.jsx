@@ -16,14 +16,10 @@ import { useResizableLayout } from "../layout/useResizableLayout.js";
 import { useSessionMemory } from "../workspace/useSessionMemory.js";
 import { useSessionStore } from "../session/useSessionStore.js";
 import { useRunExecution } from "../session/useRunExecution.js";
-import { createPlanProtocolClient } from "../session/planProtocolClient.js";
 
 export default function App() {
   const { settings, updateSetting, apiKey, updateApiKey } = useAppSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [planDraft, setPlanDraft] = useState(null);
-  const [planningBusy, setPlanningBusy] = useState(false);
-  const [planMode, setPlanMode] = useState(false);
   const {
     layoutRef,
     layoutStyle,
@@ -75,7 +71,6 @@ export default function App() {
   const resumeRunPollingRef = useRef(null);
   const ui = useMemo(() => getLocalizedUi(settings.locale), [settings.locale]);
   const commandItems = useMemo(() => buildCommandItems(ui), [ui]);
-  const planProtocol = useMemo(() => createPlanProtocolClient(settings.apiBaseUrl), [settings.apiBaseUrl]);
   const pendingTask = runState.pendingTask;
   const missingSlots = runState.missingSlots;
   const allowedActions = runState.allowedActions;
@@ -85,21 +80,6 @@ export default function App() {
   const isAwaitingUser = runState.isAwaitingUser;
   const isAwaitingConfirmation = runState.isAwaitingConfirmation;
   const hasPendingInteraction = runState.hasPendingInteraction;
-
-  useEffect(() => {
-    let cancelled = false;
-    async function restorePlanDraft() {
-      if (planDraft || runId || runState.isRunning || hasPendingInteraction) return;
-      try {
-        const plans = await planProtocol.listPlanDrafts({ status: "active", limit: 1 });
-        if (!cancelled && !activeRunIdRef.current && plans.length) setPlanDraft(plans[0]);
-      } catch {
-        // Plan recovery is best-effort; normal session/run recovery remains authoritative.
-      }
-    }
-    restorePlanDraft();
-    return () => { cancelled = true; };
-  }, [hasPendingInteraction, planDraft, planProtocol, runId, runState.isRunning]);
 
   const qgis = useMemo(
     () => ({
@@ -204,74 +184,6 @@ export default function App() {
     setSettingsOpen,
   });
 
-  async function createPlanDraft() {
-    if (runState.isRunning || hasPendingInteraction) return;
-    const text = message.trim();
-    if (!text) return;
-    if (!validateActionSettings()) return;
-    setPlanningBusy(true);
-    setError("");
-    try {
-      const request = buildExecutionRequest({ text, settings, apiKey, qgis, sources, sessionId });
-      const plan = await planProtocol.createPlanDraft(request);
-      setPlanDraft(plan);
-      setMessage("");
-    } catch (err) {
-      setError(err.message || ui.errors.requestFailed);
-    } finally {
-      setPlanningBusy(false);
-    }
-  }
-
-  async function approvePlanDraft() {
-    if (!planDraft?.plan_id) return;
-    setPlanningBusy(true);
-    setError("");
-    try {
-      setPlanDraft(await planProtocol.approvePlanDraft(planDraft.plan_id));
-    } catch (err) {
-      setError(err.message || ui.errors.requestFailed);
-    } finally {
-      setPlanningBusy(false);
-    }
-  }
-
-  async function rejectPlanDraft() {
-    if (!planDraft?.plan_id) return;
-    setPlanningBusy(true);
-    setError("");
-    try {
-      setPlanDraft(await planProtocol.rejectPlanDraft(planDraft.plan_id));
-    } catch (err) {
-      setError(err.message || ui.errors.requestFailed);
-    } finally {
-      setPlanningBusy(false);
-    }
-  }
-
-  async function runPlanDraft() {
-    if (!planDraft?.plan_id || runState.isRunning) return;
-    if (!validateActionSettings()) return;
-    setPlanningBusy(true);
-    setError("");
-    const userMessage = planDraft.user_request || message.trim();
-    try {
-      setMessage("");
-      beginVisibleRun({ preserveEvents: false, userMessage, showUserMessage: true });
-      const run = await planProtocol.runPlanDraft(planDraft.plan_id);
-      const nextRunId = String(run.run_id || "").trim();
-      const nextSessionId = String(run.session_id || planDraft.session_id || sessionId || "").trim();
-      setPlanDraft(null);
-      adoptActiveRunAndRefs({ sessionId: nextSessionId, runId: nextRunId });
-      resumeRunPollingRef.current?.({ runId: nextRunId, sessionId: nextSessionId });
-    } catch (err) {
-      setStatus("failed");
-      setError(err.message || ui.errors.requestFailed);
-    } finally {
-      setPlanningBusy(false);
-    }
-  }
-
   function validateActionSettings() {
     if (!String(apiKey || "").trim()) {
       setError(ui.errors.apiKeyRequired);
@@ -365,9 +277,6 @@ export default function App() {
             activeIssue={activeIssue}
             activeRisk={activeRisk}
             repair={repair}
-            planDraft={planDraft}
-            planningBusy={planningBusy}
-            planMode={planMode}
             allowedActions={allowedActions}
             hasPendingInteraction={hasPendingInteraction}
             resumeMode={resumeMode}
@@ -381,17 +290,13 @@ export default function App() {
             onPatchChange={updateResumePatch}
             onSubmitCommand={submitCommand}
             onSubmitPatch={submitPatch}
-            onSendMessage={planMode ? createPlanDraft : send}
+            onSendMessage={send}
             onPause={handlePause}
             onCancelRun={handleCancelRun}
             onCancelPending={cancelPendingTask}
             onConfirmRepair={confirmRepair}
             onRejectRepair={rejectRepair}
             onSelectChoice={submitPatch}
-            onTogglePlanMode={() => setPlanMode((value) => !value)}
-            onApprovePlan={approvePlanDraft}
-            onRejectPlan={rejectPlanDraft}
-            onRunPlan={runPlanDraft}
             onError={setError}
           />
         )}

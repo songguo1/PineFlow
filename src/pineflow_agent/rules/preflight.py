@@ -115,7 +115,7 @@ def _preflight_buffer(context: RuleEvaluationContext) -> list[ValidationIssue]:
         ValidationIssue(
             code="distance_requires_projected_crs",
             stage="preflight",
-            severity="warning",
+            severity="error",
             message_key="preflight.buffer.geographic_crs",
             params=params,
             repair=RepairProposal(

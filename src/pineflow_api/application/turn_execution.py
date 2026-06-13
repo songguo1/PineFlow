@@ -323,10 +323,6 @@ class TurnExecutionService:
             "decision_rows": make_json_safe(list(decorated_result.get("decision_rows") or [])),
             "updated_at": str(decorated_result.get("updated_at") or ""),
         }
-        if decorated_result.get("plan_id"):
-            payload["plan_id"] = str(decorated_result.get("plan_id") or "")
-        if isinstance(decorated_result.get("plan_context"), dict) and decorated_result.get("plan_context"):
-            payload["plan_context"] = make_json_safe(dict(decorated_result.get("plan_context") or {}))
         if pending_task:
             payload["pending_task"] = pending_task
         self.sessions.save_run_snapshot(run_id, session_id, normalize_run_snapshot(payload, run_id=run_id, session_id=session_id))
@@ -377,6 +373,7 @@ class TurnExecutionService:
         elif not next_result and not current.get("status"):
             current["status"] = RunStatus.RUNNING
         current = self.decorate_result_payload(run.session_id, current, event_count=len(run.events))
+        current["workflow"] = {"steps": _compact_workflow_steps(current)}
         current["report_audit"] = build_report_audit_from_payload(
             current,
             runtime_events=run.events,
@@ -494,10 +491,6 @@ class TurnExecutionService:
         result["risks"] = []
         result["errors"] = []
         result["goal_contract"] = self._request_goal_contract(request) or infer_goal_contract(message_content).to_dict()
-        if request is not None and request.options.plan_id:
-            result["plan_id"] = request.options.plan_id
-        if request is not None and request.options.plan_context:
-            result["plan_context"] = make_json_safe(dict(request.options.plan_context or {}))
         result["transcript"] = append_user_message_transcript(
             result.get("transcript"),
             message_content,
@@ -513,10 +506,6 @@ class TurnExecutionService:
         goal_contract = self._request_goal_contract(request)
         if goal_contract:
             payload["goal_contract"] = goal_contract
-        if request.options.plan_id:
-            payload["plan_id"] = request.options.plan_id
-        if request.options.plan_context:
-            payload["plan_context"] = make_json_safe(dict(request.options.plan_context or {}))
         return payload
 
     @staticmethod
@@ -549,10 +538,10 @@ class TurnExecutionService:
 
 
 def _resume_transition_item(route: TurnRoute) -> dict[str, Any]:
-    if route.kind not in {"structured_resume", "confirmed_repair"}:
+    if route.kind != "structured_resume":
         return {}
     pending_task = dict(route.session_state.pending_task or {})
-    action = str(route.payload.get("action") or ("confirm" if route.kind == "confirmed_repair" else "")).strip()
+    action = str(route.payload.get("action") or "").strip()
     if action == "cancel":
         return {}
     continue_with = _continue_with_label(pending_task)

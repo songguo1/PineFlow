@@ -184,7 +184,7 @@ class SessionState:
             session_id=self.session_id,
             run_id=run_id,
         )
-        return {
+        saved = {
             "session_id": self.session_id,
             "status": run_status,
             "session_status": self.session_status,
@@ -196,6 +196,7 @@ class SessionState:
             "final_message": str(result_payload.get("final_message") or ""),
             "transcript": transcript,
         }
+        return saved
 
 
 def turn_context_from_run_snapshot(snapshot: dict[str, Any] | None) -> TurnContext:
@@ -259,14 +260,22 @@ def _saved_session_transcript(
     session_id: str,
     run_id: str,
 ) -> dict[str, Any]:
+    current = _without_workflow_steps(current)
+    current_timeline = list(dict(current or {}).get("timeline") or [])
+    seed = current
+    if not current_timeline:
+        seed = build_transcript_projection(
+            messages=_messages_before_current_turn(messages, message_content),
+            result={},
+        )
     base = append_user_message_transcript(
-        current,
+        seed,
         message_content,
         message_id=f"run:{run_id}:user" if str(run_id or "").strip() else "",
         session_id=session_id,
         run_id=run_id,
     )
-    incoming = dict(result_payload.get("transcript") or {})
+    incoming = _without_workflow_steps(result_payload.get("transcript"))
     if base.get("timeline") or incoming.get("timeline"):
         return merge_transcript_projection(base, incoming)
 
@@ -274,6 +283,36 @@ def _saved_session_transcript(
     session_result = dict(result_payload)
     session_result.pop("transcript", None)
     return build_transcript_projection(messages=messages, events=events, result=session_result)
+
+
+def _without_workflow_steps(transcript: dict[str, Any] | None) -> dict[str, Any]:
+    payload = dict(transcript or {})
+    timeline = [
+        dict(item)
+        for item in list(payload.get("timeline") or [])
+        if isinstance(item, dict) and item.get("type") != "workflow_step"
+    ]
+    if timeline:
+        payload["timeline"] = timeline
+    else:
+        payload.pop("timeline", None)
+    return make_json_safe(payload)
+
+
+def _messages_before_current_turn(messages: list[dict[str, Any]], message_content: str) -> list[dict[str, Any]]:
+    text = str(message_content or "").strip()
+    if not text:
+        return [dict(item) for item in list(messages or []) if isinstance(item, dict)]
+    normalized = [
+        dict(item)
+        for item in list(messages or [])
+        if isinstance(item, dict)
+    ]
+    for index in range(len(normalized) - 1, -1, -1):
+        item = normalized[index]
+        if str(item.get("role") or "").strip() == "user" and str(item.get("content") or "").strip() == text:
+            return normalized[:index]
+    return normalized
 
 
 def _append_turn_messages(

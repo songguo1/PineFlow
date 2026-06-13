@@ -60,14 +60,6 @@ def normalize_run_snapshot(
     if report_audit and any(report_audit.get(key) for key in report_audit):
         snapshot["report_audit"] = report_audit
         result["report_audit"] = report_audit
-    plan_id = str(payload.get("plan_id") or result.get("plan_id") or "")
-    if plan_id:
-        snapshot["plan_id"] = plan_id
-        result["plan_id"] = plan_id
-    plan_context = _dict(payload.get("plan_context") or result.get("plan_context"))
-    if plan_context:
-        snapshot["plan_context"] = plan_context
-        result["plan_context"] = plan_context
     decision_rows = normalize_decision_rows(payload.get("decision_rows") or result.get("decision_rows"))
     if not decision_rows:
         decision_rows = build_decision_rows(result)

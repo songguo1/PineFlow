@@ -16,7 +16,6 @@ from pineflow_api.persistence.session_state import SessionState
 TurnKind = Literal[
     "new_session",
     "structured_resume",
-    "confirmed_repair",
     "pending_reply",
     "continue_session",
 ]
@@ -70,18 +69,6 @@ class SessionRouter:
                 subprocess_key="_resume",
             )
 
-        confirmed_repair = self._confirmed_repair_payload(request, session_state)
-        if confirmed_repair:
-            return TurnRoute(
-                kind="confirmed_repair",
-                session_id=session_id,
-                session_state=session_state,
-                restore_run_id=self._restore_run_id(session_state),
-                payload=confirmed_repair,
-                message_content=request.message,
-                subprocess_key="_confirmed_repair",
-            )
-
         pending_reply = self._pending_reply_payload(request, session_state)
         if pending_reply:
             return TurnRoute(
@@ -112,23 +99,6 @@ class SessionRouter:
             session_state=SessionState.from_session(session_id, None),
             message_content=request.message,
         )
-
-    @staticmethod
-    def _confirmed_repair_payload(
-        request: QGISAgentRequest,
-        session_state: SessionState,
-    ) -> dict[str, Any] | None:
-        if not session_state.exists:
-            return None
-        if session_state.status != "awaiting_confirmation":
-            return None
-        if not SessionRouter._looks_like_confirmation(request.message):
-            return None
-        pending_task = session_state.pending_task
-        repair = session_state.repair
-        if not pending_task or not repair:
-            return None
-        return {"message": request.message}
 
     @staticmethod
     def _pending_reply_payload(
@@ -193,29 +163,6 @@ class SessionRouter:
     @staticmethod
     def _restore_run_id(session_state: SessionState) -> str:
         return session_state.latest_run_id
-
-    @staticmethod
-    def _looks_like_confirmation(message: str) -> bool:
-        text = str(message or "").strip().lower()
-        confirmations = {
-            "y",
-            "yes",
-            "ok",
-            "confirm",
-            "continue",
-            "proceed",
-            "确认",
-            "确认执行",
-            "确认应用建议修复",
-            "确认应用建议修复。",
-            "继续",
-            "继续执行",
-            "同意",
-            "可以",
-            "是",
-            "执行",
-        }
-        return text in confirmations or "确认" in text or "继续" in text
 
     @staticmethod
     def resume_message_content(request: QGISAgentRequest, resume_payload: dict[str, Any]) -> str:

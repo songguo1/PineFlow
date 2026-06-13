@@ -2,11 +2,6 @@
 name: attribute_filtering
 description: "属性筛选与字段整理：在 extract_by_attribute、select_by_expression、keep_fields、field_calculator 之间选择合适工具，并处理字段引用、NULL、复杂表达式和结果字段瘦身。当用户需要按字段筛选、按表达式筛选、保留部分字段或整理属性表时使用。"
 requires_toolkits: [attribute_data, vector_analysis]
-trigger_keywords: ["按表达式", "表达式筛选", "select by expression", "filter expression", "属性筛选", "保留字段", "keep fields", "字段整理", "字段瘦身"]
-intent_patterns:
-  - attribute_filter
-  - expression_filter
-  - field_pruning
 workspace_attention:
   - fields
   - field_summaries

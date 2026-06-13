@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import threading
 from pathlib import Path
 from threading import Lock
 from typing import Any
@@ -21,6 +22,7 @@ class SubprocessQGISRuntime:
         self.launcher = str(launcher or "").strip()
         self.prefix_path = str(prefix_path or "").strip()
         self._process: subprocess.Popen[str] | None = None
+        self._stderr_tail: list[str] = []
         self._lock = Lock()
         if not self.launcher or not Path(self.launcher).exists():
             raise QGISRuntimeError(
@@ -113,8 +115,8 @@ class SubprocessQGISRuntime:
             ) from exc
         if not output:
             return_code = process.poll()
+            stderr = self._worker_stderr_tail()
             self._shutdown_locked()
-            stderr = ""
             raise QGISRuntimeError(
                 stderr or f"QGIS runtime worker returned empty output with code {return_code}.",
                 data={"operation": payload.get("operation") or "", "return_code": return_code},
@@ -146,16 +148,24 @@ class SubprocessQGISRuntime:
         if self._process is not None and self._process.poll() is None:
             return self._process
         self._process = subprocess.Popen(
-            launcher_command(self.launcher, "-m", "pineflow_api.entrypoints.worker", "--runtime-rpc-loop"),
-            cwd=str(Path.cwd()),
+            launcher_command(self.launcher, self._worker_script(), "--runtime-rpc-loop"),
+            cwd=self._source_root(),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
             text=True,
             encoding="utf-8",
             errors="replace",
             env=self._worker_env(),
         )
+        self._stderr_tail = []
+        stderr = getattr(self._process, "stderr", None)
+        if stderr is not None:
+            threading.Thread(
+                target=self._collect_stderr,
+                args=(stderr,),
+                daemon=True,
+            ).start()
         return self._process
 
     def _shutdown_locked(self) -> None:
@@ -188,4 +198,30 @@ class SubprocessQGISRuntime:
         env = os.environ.copy()
         if self.prefix_path:
             env["QGIS_PREFIX_PATH"] = self.prefix_path
+        src_path = self._source_root()
+        python_path = str(env.get("PYTHONPATH") or "")
+        entries = [item for item in python_path.split(os.pathsep) if item]
+        if src_path not in entries:
+            env["PYTHONPATH"] = os.pathsep.join([src_path, *entries])
         return env
+
+    @staticmethod
+    def _source_root() -> str:
+        return str(Path(__file__).resolve().parents[2])
+
+    @staticmethod
+    def _worker_script() -> str:
+        return str(Path(__file__).resolve().parents[1] / "entrypoints" / "worker.py")
+
+    def _collect_stderr(self, stream: Any) -> None:
+        for line in stream:
+            text = str(line or "").strip()
+            if not text:
+                continue
+            self._stderr_tail.append(text)
+            del self._stderr_tail[:-20]
+
+    def _worker_stderr_tail(self) -> str:
+        if not self._stderr_tail:
+            return ""
+        return "\n".join(self._stderr_tail[-20:])

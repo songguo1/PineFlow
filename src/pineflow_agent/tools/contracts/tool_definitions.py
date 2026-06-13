@@ -224,6 +224,7 @@ def display_title_for_action(action: str) -> str:
 
 
 def canonical_action_for_intent(text: str, *, context: dict[str, Any] | None = None) -> str:
+    del context
     key = str(text or "").strip()
     if not key:
         return ""
@@ -237,9 +238,6 @@ def canonical_action_for_intent(text: str, *, context: dict[str, Any] | None = N
     if alias:
         return alias
 
-    context_text = _intent_context_text(context)
-    if _looks_like_export_intent(normalized, context_text) and "export_result" in definitions:
-        return "export_result"
     return ""
 
 
@@ -325,51 +323,6 @@ def _action_for_normalized_text(normalized: str, definitions: dict[str, ToolDefi
 
 def _normalized_intent_text(text: str) -> str:
     return re.sub(r"\s+", "", str(text or "").strip()).casefold()
-
-
-def _intent_context_text(context: dict[str, Any] | None) -> str:
-    if not isinstance(context, dict) or not context:
-        return ""
-    parts: list[str] = []
-    for key in ("continue_with", "question", "last_question", "ux_explanation"):
-        value = str(context.get(key) or "").strip()
-        if value:
-            parts.append(value)
-    for key in list(context.get("missing_slots") or []):
-        text = str(key or "").strip()
-        if text:
-            parts.append(text)
-    for key in dict(context.get("slot_patch_schema") or {}).keys():
-        text = str(key or "").strip()
-        if text:
-            parts.append(text)
-    for key in dict(context.get("filled_slots") or {}).keys():
-        text = str(key or "").strip()
-        if text:
-            parts.append(text)
-    return " ".join(parts)
-
-
-def _looks_like_export_intent(normalized: str, context_text: str) -> bool:
-    text = f"{normalized} {context_text}"
-    if "导出" not in text and "export" not in text:
-        return False
-    return any(
-        token in text
-        for token in (
-            "output_path",
-            "output",
-            "路径",
-            "文件",
-            "保存",
-            "save",
-            ".shp",
-            ".geojson",
-            ".gpkg",
-            ".tif",
-            ".tiff",
-        )
-    )
 
 
 def action_contracts() -> dict[str, dict[str, Any]]:

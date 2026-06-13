@@ -136,5 +136,5 @@ class SkillToolProvider:
                 provider=self.name,
                 executor=None,
                 groups=(),
-                tags=tuple(meta.trigger_keywords),
+                tags=(),
             )

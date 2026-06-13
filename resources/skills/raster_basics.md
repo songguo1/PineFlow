@@ -2,7 +2,6 @@
 name: raster_basics
 description: "栅格基础操作：像元大小选择、波段处理、NoData 处理。当用户需要处理栅格数据时使用。"
 requires_toolkits: [raster]
-trigger_keywords: ["raster", "栅格", "tif", "geotiff", "dem", "高程", "像元", "波段", "采样", "zonal"]
 max_chars: 600
 ---
 

@@ -2,10 +2,6 @@
 name: csv_to_points
 description: "CSV表格转点矢量图层：识别经纬度列、创建点、校验CRS。当用户提供了CSV或表格数据需要转成点图层时使用。"
 requires_toolkits: [data_io]
-trigger_keywords: ["csv", "表格", "经纬度", "lat", "lon", "转点", "坐标", "x_field", "y_field"]
-intent_patterns:
-  - csv_to_point_layer
-  - coordinate_column_detection
 workspace_attention:
   - csv_fields
   - coordinate_field_candidates

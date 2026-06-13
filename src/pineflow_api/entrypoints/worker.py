@@ -6,7 +6,12 @@ import json
 import os
 import sys
 from contextlib import redirect_stdout
+from pathlib import Path
 from typing import Any, Callable
+
+_SRC_ROOT = Path(__file__).resolve().parents[2]
+if str(_SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(_SRC_ROOT))
 
 from pineflow_runtime.errors import QGISRuntimeError, ToolExecutionError, ToolValidationError
 from pineflow_runtime.runtime import QGISRuntime

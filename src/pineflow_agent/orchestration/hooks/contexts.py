@@ -48,7 +48,7 @@ class HookContext:
 class PromptContext:
     """Mutable context passed through BEFORE_PROMPT_BUILD hooks."""
 
-    __slots__ = ("user_request", "state", "previous_steps", "visible_tools", "tool_disclosure", "loaded_skills", "session_memory", "artifacts", "data")
+    __slots__ = ("user_request", "state", "previous_steps", "visible_tools", "tool_disclosure", "loaded_skills", "session_memory", "artifacts", "run_context", "data")
 
     def __init__(
         self,
@@ -60,6 +60,7 @@ class PromptContext:
         loaded_skills: list[dict[str, Any]] | None = None,
         session_memory: str = "",
         artifacts: list[dict[str, Any]] | None = None,
+        run_context: dict[str, Any] | None = None,
     ) -> None:
         self.user_request = user_request
         self.state = state or {}
@@ -69,6 +70,7 @@ class PromptContext:
         self.loaded_skills = loaded_skills or []
         self.session_memory = session_memory
         self.artifacts = artifacts or []
+        self.run_context = run_context or {}
         self.data: dict[str, Any] = {}
 
 

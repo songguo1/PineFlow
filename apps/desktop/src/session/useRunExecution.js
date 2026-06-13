@@ -312,7 +312,7 @@ export function useRunExecution({
         }
         return;
       }
-      setVisibleRunSnapshot(stripTranscriptPayload(snapshot));
+      setVisibleRunSnapshot(snapshot && typeof snapshot === "object" ? snapshot : {});
       adoptVisibleRun(normalizedSessionId, snapshot?.run_id);
       if (snapshot?.status) setStatus(String(snapshot.status || "running"));
       await refreshSessionResult(normalizedSessionId);

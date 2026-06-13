@@ -56,8 +56,6 @@ class TurnRunner:
                 result_payload = self._run_new_session(route, request, emit)
             elif route.kind == "continue_session":
                 result_payload = self._run_continuation(route, request, emit)
-            elif route.kind == "confirmed_repair":
-                result_payload = self._run_confirmed_repair(route, request, emit)
             elif route.kind == "pending_reply":
                 result_payload = self._run_pending_reply(route, request, emit)
             elif route.kind == "structured_resume":
@@ -102,8 +100,7 @@ class TurnRunner:
                 session_id=route.session_id,
                 on_event=emit,
                 goal_contract=dict(request.options.goal_contract or {}),
-                plan_id=request.options.plan_id,
-                plan_context=dict(request.options.plan_context or {}),
+                run_context=dict(request.options.run_context or {}),
             )
             return self._with_preload_logs(self._with_toolbox_artifacts(result.to_dict(), toolbox), preload_logs)
         finally:
@@ -134,37 +131,7 @@ class TurnRunner:
                 on_event=emit,
                 prior_steps=list(turn.prior_steps),
                 goal_contract=dict(request.options.goal_contract or {}),
-                plan_id=request.options.plan_id,
-                plan_context=dict(request.options.plan_context or {}),
-            )
-            return self._with_preload_logs(self._with_toolbox_artifacts(result.to_dict(), toolbox), preload_logs)
-        finally:
-            self._shutdown_toolbox_runtime(toolbox)
-
-    def _run_confirmed_repair(
-        self,
-        route: TurnRoute,
-        request: QGISAgentRequest,
-        emit: EventSink,
-    ) -> dict[str, Any]:
-        turn = self._restore_turn_context(route)
-        toolbox = self._restored_toolbox(request, route.session_id, turn)
-        try:
-            preload_logs = self._preload_sources(
-                toolbox,
-                request,
-                emit,
-                skip_existing=True,
-                context=self._resume_preload_context(turn.pending_task, action="confirm"),
-            )
-            agent = self._agent_factory(request, toolbox)
-            result = agent.resume_pending_task(
-                action="confirm",
-                pending_task=dict(turn.pending_task),
-                repair=dict(turn.repair),
-                session_id=route.session_id,
-                on_event=emit,
-                prior_steps=list(turn.prior_steps),
+                run_context=dict(request.options.run_context or {}),
             )
             return self._with_preload_logs(self._with_toolbox_artifacts(result.to_dict(), toolbox), preload_logs)
         finally:
@@ -187,7 +154,8 @@ class TurnRunner:
                 context=self._resume_preload_context(turn.pending_task, action="answer"),
             )
             agent = self._agent_factory(request, toolbox)
-            result = agent.resume_pending_task(
+            result = self._resume_pending_task(
+                agent,
                 action="reply",
                 user_reply=str(route.payload.get("user_reply") or request.message),
                 pending_task=dict(turn.pending_task),
@@ -221,7 +189,8 @@ class TurnRunner:
                     skip_existing=True,
                     context=self._resume_preload_context(pending_task, action=action),
                 )
-            result = agent.resume_pending_task(
+            result = self._resume_pending_task(
+                agent,
                 action=action,
                 pending_task=pending_task,
                 repair=repair,
@@ -260,6 +229,59 @@ class TurnRunner:
             if restored.state_tree or restored.prior_steps or restored.pending_task or restored.repair:
                 return restored
         return route.session_state.turn_context(message=route.message_content, user_reply=str(route.payload.get("user_reply") or ""))
+
+    @staticmethod
+    def _resume_pending_task(agent: Any, **kwargs: Any) -> Any:
+        resume_pending = getattr(agent, "resume_pending_task", None)
+        if callable(resume_pending):
+            return resume_pending(**kwargs)
+        action = str(kwargs.get("action") or "").strip()
+        if action == "reply":
+            return agent.resume_with_user_reply(
+                user_reply=str(kwargs.get("user_reply") or ""),
+                pending_task=dict(kwargs.get("pending_task") or {}),
+                session_id=str(kwargs.get("session_id") or ""),
+                on_event=kwargs.get("on_event"),
+                prior_steps=list(kwargs.get("prior_steps") or []),
+            )
+        if action == "patch":
+            return agent.resume_with_slot_patch(
+                pending_task=dict(kwargs.get("pending_task") or {}),
+                slot_patch=dict(kwargs.get("slot_patch") or {}),
+                session_id=str(kwargs.get("session_id") or ""),
+                on_event=kwargs.get("on_event"),
+                prior_steps=list(kwargs.get("prior_steps") or []),
+            )
+        if action == "confirm":
+            return agent.run_confirmed_repair(
+                pending_task=dict(kwargs.get("pending_task") or {}),
+                repair=dict(kwargs.get("repair") or {}),
+                session_id=str(kwargs.get("session_id") or ""),
+                on_event=kwargs.get("on_event"),
+                prior_steps=list(kwargs.get("prior_steps") or []),
+            )
+        if action == "reject":
+            return agent.reject_pending_repair(
+                pending_task=dict(kwargs.get("pending_task") or {}),
+                repair=dict(kwargs.get("repair") or {}),
+                session_id=str(kwargs.get("session_id") or ""),
+                on_event=kwargs.get("on_event"),
+            )
+        if action == "cancel":
+            return agent.cancel_pending_task(
+                pending_task=dict(kwargs.get("pending_task") or {}),
+                session_id=str(kwargs.get("session_id") or ""),
+                on_event=kwargs.get("on_event"),
+            )
+        if action == "replan":
+            return agent.resume_with_replanned_request(
+                user_request=str(kwargs.get("user_request") or ""),
+                pending_task=dict(kwargs.get("pending_task") or {}),
+                session_id=str(kwargs.get("session_id") or ""),
+                on_event=kwargs.get("on_event"),
+                prior_steps=list(kwargs.get("prior_steps") or []),
+            )
+        raise ValueError(f"Unsupported pending action: {action}")
 
     @staticmethod
     def _resume_preload_context(pending_task: dict[str, Any], *, action: str) -> dict[str, Any]:

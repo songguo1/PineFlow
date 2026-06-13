@@ -2,10 +2,6 @@
 name: export_output
 description: "GIS结果导出：选择 .gpkg/.shp/.geojson 等格式，判断什么时候需要显式 output_path，什么时候确认覆盖风险，并使用 export_result 稳定导出最终结果。当用户要导出、保存、落盘 GIS 结果时使用。"
 requires_toolkits: [data_io]
-trigger_keywords: ["导出", "export", "保存结果", "输出文件", ".gpkg", ".shp", ".geojson", "覆盖输出", "output_path"]
-intent_patterns:
-  - export_final_output
-  - persist_result
 workspace_attention:
   - final_artifacts
   - latest_outputs

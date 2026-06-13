@@ -2,10 +2,6 @@
 name: boundary_filter
 description: "按边界筛选/裁剪：统一CRS后执行clip或extract_by_location。当用户需要按行政区域、研究区等边界筛选数据时使用。"
 requires_toolkits: [vector_transform, vector_overlay]
-trigger_keywords: ["clip", "裁剪", "边界", "行政", "筛选", "范围内", "按位置", "extract", "intersect", "within"]
-intent_patterns:
-  - boundary_filter
-  - clip_or_extract_by_location
 workspace_attention:
   - candidate_layers
   - geometry_type

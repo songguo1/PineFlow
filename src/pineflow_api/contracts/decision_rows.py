@@ -10,7 +10,6 @@ from pineflow_agent.core.json_safety import make_json_safe
 def build_decision_rows(result: dict[str, Any], events: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
     payload = dict(result or {})
     rows: list[dict[str, Any]] = []
-    rows.extend(_plan_rows(payload.get("plan_context")))
     rows.extend(_report_audit_rows(payload.get("report_audit")))
     rows.extend(_event_rows(events or []))
     rows.extend(_risk_rows(payload.get("risks")))
@@ -34,33 +33,6 @@ def normalize_decision_rows(value: Any) -> list[dict[str, Any]]:
         }
         rows.append(make_json_safe(row))
     return rows
-
-
-def _plan_rows(value: Any) -> list[dict[str, Any]]:
-    if not isinstance(value, dict) or not value:
-        return []
-    plan = dict(value)
-    assumptions = _string_items(plan.get("approved_assumptions")) or _string_items(plan.get("assumptions"))
-    risks = [
-        str(item.get("message") or item.get("code") or "")
-        for item in list(plan.get("risk_preview") or [])
-        if isinstance(item, dict)
-    ]
-    return [
-        _row(
-            row_id=str(plan.get("plan_id") or "plan"),
-            kind="plan",
-            status=str(plan.get("status") or "plan"),
-            title="Plan approval",
-            summary=str(plan.get("user_request") or plan.get("plan_id") or ""),
-            details=[
-                ("Plan ID", plan.get("plan_id")),
-                ("Goal source", dict(plan.get("goal_contract") or {}).get("source")),
-                ("Confirmed assumptions", "; ".join(assumptions)),
-                ("Risk preview", "; ".join(item for item in risks if item)),
-            ],
-        )
-    ]
 
 
 def _event_rows(events: list[dict[str, Any]]) -> list[dict[str, Any]]:

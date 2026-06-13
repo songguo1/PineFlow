@@ -124,12 +124,12 @@ class ReActGISAgent:
         on_event: EventHandler | None = None,
         prior_steps: list[ReActStep] | list[dict[str, Any]] | None = None,
         goal_contract: dict[str, Any] | None = None,
-        plan_id: str = "",
-        plan_context: dict[str, Any] | None = None,
+        run_context: dict[str, Any] | None = None,
     ) -> AgentResult:
         runtime_events: list[dict[str, Any]] = []
         on_event = _capturing_event_sink(on_event, runtime_events)
-        self._source_run_id = str(dict(plan_context or {}).get("executed_run_id") or "")
+        run_context_payload = dict(run_context or {})
+        self._source_run_id = str(run_context_payload.get("source_run_id") or "")
         steps: list[ReActStep] = react_steps_from_payload(prior_steps)
         if steps:
             self._restore_from_prior_steps(steps)
@@ -153,14 +153,19 @@ class ReActGISAgent:
             session_memory_before=session_memory,
             runtime_events=runtime_events,
             goal_contract=goal_contract,
-            plan_id=plan_id,
-            plan_context=plan_context,
         )
 
         while True:
             index = len(steps) + 1
             try:
-                plan = self._next_action(user_request, steps, session_id=session_id, on_event=on_event, session_memory=session_memory)
+                plan = self._next_action(
+                    user_request,
+                    steps,
+                    session_id=session_id,
+                    on_event=on_event,
+                    session_memory=session_memory,
+                    run_context=run_context_payload,
+                )
             except Exception as exc:
                 error_text = str(exc)
                 result = self._result_for_action_selection_error(
@@ -419,8 +424,10 @@ class ReActGISAgent:
         session_id: str = "",
         on_event: EventHandler | None = None,
         session_memory: str = "",
+        run_context: dict[str, Any] | None = None,
     ) -> ActionPlan:
         try:
+            artifacts = toolbox_artifacts(self.toolbox)
             plan, self.tool_disclosure = PromptAssembler(
                 llm=self.llm,
                 hooks=self.hooks,
@@ -432,7 +439,8 @@ class ReActGISAgent:
                 state=self.state.to_dict(),
                 steps=steps,
                 session_memory=session_memory,
-                artifacts=toolbox_artifacts(self.toolbox),
+                artifacts=artifacts,
+                run_context=dict(run_context or {}),
             )
             self.meta.user_request = user_request
             self._sync_meta_dispatcher()
@@ -556,8 +564,6 @@ class ReActGISAgent:
         session_memory_before: str,
         runtime_events: list[dict[str, Any]] | None = None,
         goal_contract: dict[str, Any] | None = None,
-        plan_id: str = "",
-        plan_context: dict[str, Any] | None = None,
     ) -> BoundResultFinalizer:
         return BoundResultFinalizer(
             finalizer=ResultFinalizer(hooks=self.hooks, toolbox=self.toolbox),
@@ -567,8 +573,6 @@ class ReActGISAgent:
             session_memory_before=session_memory_before,
             runtime_events=runtime_events,
             goal_contract=goal_contract,
-            plan_id=plan_id,
-            plan_context=plan_context,
         )
 
     def _ux_narrator(self) -> UXNarrator:
@@ -592,7 +596,6 @@ def _normalize_tool_name_list(value: list[str] | tuple[str, ...] | str | None) -
     else:
         raw_items = list(value)
     return tuple(str(item or "").strip() for item in raw_items if str(item or "").strip())
-
 
 def _capturing_event_sink(
     on_event: EventHandler | None,

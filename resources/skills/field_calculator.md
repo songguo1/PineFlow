@@ -2,7 +2,6 @@
 name: field_calculator
 description: "字段计算器：表达式语法、NULL 处理、类型转换。当用户需要计算新字段或修改现有字段值时使用。"
 requires_toolkits: [vector_analysis]
-trigger_keywords: ["field", "字段", "计算", "calculate", "表达式", "expression", "公式", "formula"]
 max_chars: 600
 ---
 

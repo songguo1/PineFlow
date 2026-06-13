@@ -75,9 +75,8 @@ class AgentOptions(BaseModel):
     tool_allow: list[str] = Field(default_factory=list)
     tool_deny: list[str] = Field(default_factory=list)
     reset_session: bool = False
-    plan_id: str = ""
     goal_contract: dict[str, Any] = Field(default_factory=dict)
-    plan_context: dict[str, Any] = Field(default_factory=dict)
+    run_context: dict[str, Any] = Field(default_factory=dict)
 
 
 class ResumePayload(BaseModel):

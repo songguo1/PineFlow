@@ -4,7 +4,6 @@ import { PanelTitle } from "../layout/LayoutPrimitives.jsx";
 import { ChatTranscript } from "./ChatTranscript.jsx";
 import { ConversationComposer } from "./ConversationComposer.jsx";
 import { ResumePanel } from "./ResumePanel.jsx";
-import { PlanDraftCard } from "../planning/PlanDraftCard.jsx";
 
 export function ConversationWorkspace({
   ui,
@@ -16,9 +15,6 @@ export function ConversationWorkspace({
   activeIssue,
   activeRisk,
   repair,
-  planDraft,
-  planningBusy,
-  planMode,
   allowedActions,
   hasPendingInteraction,
   resumeMode,
@@ -39,10 +35,6 @@ export function ConversationWorkspace({
   onConfirmRepair,
   onRejectRepair,
   onSelectChoice,
-  onTogglePlanMode,
-  onApprovePlan,
-  onRejectPlan,
-  onRunPlan,
   onError,
 }) {
   return (
@@ -58,31 +50,22 @@ export function ConversationWorkspace({
         runState={runState}
         ui={ui}
       />
-      {hasPendingInteraction || planDraft ? (
+      {hasPendingInteraction ? (
         <section className="interaction-dock">
-          {hasPendingInteraction ? (
-            <ResumePanel
-              ui={ui}
-              status={runState.status}
-              pendingTask={pendingTask}
-              issue={activeIssue}
-              risk={activeRisk}
-              repair={repair}
-              allowedActions={allowedActions}
-              resumeMode={resumeMode}
-              onModeChange={setResumeMode}
-              onConfirm={onConfirmRepair}
-              onReject={onRejectRepair}
-              onCancel={onCancelPending}
-              onChoiceSelect={onSelectChoice}
-            />
-          ) : null}
-          <PlanDraftCard
-            plan={planDraft}
-            busy={planningBusy}
-            onApprove={onApprovePlan}
-            onReject={onRejectPlan}
-            onRun={onRunPlan}
+          <ResumePanel
+            ui={ui}
+            status={runState.status}
+            pendingTask={pendingTask}
+            issue={activeIssue}
+            risk={activeRisk}
+            repair={repair}
+            allowedActions={allowedActions}
+            resumeMode={resumeMode}
+            onModeChange={setResumeMode}
+            onConfirm={onConfirmRepair}
+            onReject={onRejectRepair}
+            onCancel={onCancelPending}
+            onChoiceSelect={onSelectChoice}
           />
         </section>
       ) : null}
@@ -106,9 +89,6 @@ export function ConversationWorkspace({
         onPause={onPause}
         onCancelRun={onCancelRun}
         onCancelPending={onCancelPending}
-        onTogglePlanMode={onTogglePlanMode}
-        planMode={planMode}
-        planningBusy={planningBusy}
         onError={onError}
       />
     </main>

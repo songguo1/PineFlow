@@ -27,8 +27,6 @@ class ResultFinalizer:
         session_memory_before: str,
         runtime_events: list[dict[str, Any]] | None = None,
         goal_contract: dict[str, Any] | None = None,
-        plan_id: str = "",
-        plan_context: dict[str, Any] | None = None,
     ) -> AgentResult:
         ctx = RunResultContext(
             result=result,
@@ -42,10 +40,6 @@ class ResultFinalizer:
         final_result = getattr(finalized, "result", result) or result
         if goal_contract:
             final_result.goal_contract = dict(goal_contract)
-        if plan_id:
-            final_result.plan_id = plan_id
-        if plan_context:
-            final_result.plan_context = dict(plan_context)
         attach_goal_contract(final_result, user_request)
         final_result.report_audit = build_report_audit_dict(final_result, runtime_events=runtime_events)
         write_final_report(final_result, toolbox=self.toolbox, user_request=user_request, runtime_events=runtime_events)
@@ -61,8 +55,6 @@ class BoundResultFinalizer:
     session_memory_before: str
     runtime_events: list[dict[str, Any]] | None = None
     goal_contract: dict[str, Any] | None = None
-    plan_id: str = ""
-    plan_context: dict[str, Any] | None = None
 
     def __call__(self, result: AgentResult) -> AgentResult:
         return self.finalizer.finalize(
@@ -73,6 +65,4 @@ class BoundResultFinalizer:
             session_memory_before=self.session_memory_before,
             runtime_events=self.runtime_events,
             goal_contract=self.goal_contract,
-            plan_id=self.plan_id,
-            plan_context=self.plan_context,
         )

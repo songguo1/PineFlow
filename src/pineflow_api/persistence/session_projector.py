@@ -30,10 +30,9 @@ class SessionProjector:
         "transcript",
         "file_state",
         "goal_contract",
-        "plan_context",
         "report_audit",
     )
-    COPY_TEXT_FIELDS = ("next_question", "plan_id")
+    COPY_TEXT_FIELDS = ("next_question",)
     EXECUTION_RESULT_KEYS = (
         "session_status",
         "messages",
@@ -51,8 +50,6 @@ class SessionProjector:
         "transcript",
         "file_state",
         "goal_contract",
-        "plan_id",
-        "plan_context",
         "quality_findings",
         "report_audit",
         "decision_rows",
@@ -107,7 +104,7 @@ class SessionProjector:
         if isinstance(event.get("result"), dict):
             payload = SessionProjector.merge_execution_result(payload, event["result"], fallback_status=event_name)
         transcript_item = dict(event.get("transcript_item") or {})
-        if transcript_item:
+        if transcript_item and transcript_item.get("type") != "workflow_step":
             payload["transcript"] = append_transcript_item(payload.get("transcript"), transcript_item)
         if event_name in {"completed", "failed", "cancelled"}:
             run_status = _status_from_event_name(event_name)
@@ -312,12 +309,12 @@ def _merge_execution_contract(target: dict[str, Any], result: dict[str, Any]) ->
             target[key] = _normalize_json_list(result.get(key))
     if "state_tree" in result and _state_tree_has_content(result.get("state_tree")):
         target["state_tree"] = _normalize_state_tree(result.get("state_tree"))
-    for key in ("pending_task", "repair", "goal_contract", "plan_context", "report_audit", "file_state", "active_run_result"):
+    for key in ("pending_task", "repair", "goal_contract", "report_audit", "file_state", "active_run_result"):
         if key in result:
             target[key] = _normalize_json_dict(result.get(key))
     if "transcript" in result:
         target["transcript"] = merge_transcript_projection(target.get("transcript"), result.get("transcript"))
-    for key in ("next_question", "plan_id"):
+    for key in ("next_question",):
         if key in result:
             target[key] = str(result.get(key) or "")
 

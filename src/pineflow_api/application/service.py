@@ -7,7 +7,6 @@ from typing import Any, Callable
 from pineflow_agent.tools.qgis.toolbox import QGISToolbox
 
 from pineflow_api.application.agent_runtime_factory import AgentRuntimeFactoryService
-from pineflow_api.application.plan_service import PlanService
 from pineflow_api.application.qgis_runtime_info import QGISRuntimeInfoService
 from pineflow_api.application.run_commands import RunCommandService
 from pineflow_api.application.run_runtime import RunManager
@@ -15,7 +14,6 @@ from pineflow_api.application.run_service import RunService
 from pineflow_api.application.turn_execution import TurnExecutionService
 from pineflow_api.application.turn_intents import TurnIntentService
 from pineflow_api.contracts.models import QGISAgentRequest
-from pineflow_api.contracts.plans import PlanPatchRequest, PlanRunRequest
 from pineflow_api.contracts.run_control import RunControlAction, control_action_from_resume_request
 from pineflow_api.persistence.sessions import SESSION_STORE, SessionStore
 from pineflow_api.routing.turn_routing import SessionRouter
@@ -33,7 +31,6 @@ class QGISAgentRunner:
         self.run_manager = RunManager(self.runs)
         self.intent_service = TurnIntentService()
         self.qgis_info = QGISRuntimeInfoService()
-        self.plans = PlanService(workspace=self.sessions.workspace)
         self.agent_runtime = AgentRuntimeFactoryService(run_manager=self.run_manager)
         self.turn_execution = TurnExecutionService(
             sessions=self.sessions,
@@ -69,31 +66,6 @@ class QGISAgentRunner:
 
     def create_background_run(self, request: QGISAgentRequest) -> dict[str, Any]:
         return self.run_commands.create_run(request)
-
-    def create_plan(self, request: QGISAgentRequest) -> dict[str, Any]:
-        return self.plans.create(request)
-
-    def get_plan(self, plan_id: str) -> dict[str, Any]:
-        return self.plans.get(plan_id)
-
-    def list_plans(self, *, session_id: str = "", status: str = "active", limit: int = 20) -> list[dict[str, Any]]:
-        return self.plans.list(session_id=session_id, status=status, limit=limit)
-
-    def patch_plan(self, plan_id: str, patch: PlanPatchRequest) -> dict[str, Any]:
-        return self.plans.patch(plan_id, patch)
-
-    def approve_plan(self, plan_id: str) -> dict[str, Any]:
-        return self.plans.approve(plan_id)
-
-    def reject_plan(self, plan_id: str) -> dict[str, Any]:
-        return self.plans.reject(plan_id)
-
-    def run_plan(self, plan_id: str, body: PlanRunRequest | None = None) -> dict[str, Any]:
-        request = self.plans.execution_request(plan_id, request=body.request if body else None)
-        summary = self.create_background_run(request)
-        self.plans.mark_executed(plan_id, run_id=str(summary.get("run_id") or ""))
-        summary["plan_id"] = plan_id
-        return summary
 
     def resume_background_run(self, run_id: str, request: QGISAgentRequest) -> dict[str, Any]:
         return self.run_commands.apply_control_action(run_id, control_action_from_resume_request(run_id, request))

@@ -9,9 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from pineflow_api import __version__
 from pineflow_api.contracts.models import QGISAgentRequest
-from pineflow_api.contracts.plans import PlanCreateRequest, PlanPatchRequest, PlanRunRequest
 from pineflow_api.contracts.run_control import RunControlAction
-from pineflow_api.application.plan_service import PlanNotFoundError
 from pineflow_api.application.run_commands import RunCommandError, RunNotFoundError
 from pineflow_api.application.service import QGISAgentRunner
 from pineflow_api.config import DEFAULT_QGIS_LAUNCHER, DEFAULT_QGIS_PREFIX_PATH
@@ -48,58 +46,6 @@ def create_app(*, runner: QGISAgentRunner | None = None) -> FastAPI:
     @app.post("/qgis/runs")
     def create_run(request: QGISAgentRequest) -> dict[str, Any]:
         return active_runner.create_background_run(request)
-
-    @app.post("/qgis/plans")
-    def create_plan(body: PlanCreateRequest) -> dict[str, Any]:
-        return active_runner.create_plan(body.request)
-
-    @app.get("/qgis/plans")
-    def list_plans(
-        session_id: str = Query(default=""),
-        status: str = Query(default="active"),
-        limit: int = Query(default=20, ge=1, le=200),
-    ) -> dict[str, Any]:
-        plans = active_runner.list_plans(session_id=session_id, status=status, limit=limit)
-        return {"plans": plans, "total": len(plans)}
-
-    @app.get("/qgis/plans/{plan_id}")
-    def get_plan(plan_id: str) -> dict[str, Any]:
-        try:
-            return active_runner.get_plan(plan_id)
-        except PlanNotFoundError:
-            raise HTTPException(status_code=404, detail="Plan does not exist.")
-
-    @app.post("/qgis/plans/{plan_id}/approve")
-    def approve_plan(plan_id: str) -> dict[str, Any]:
-        try:
-            return active_runner.approve_plan(plan_id)
-        except PlanNotFoundError:
-            raise HTTPException(status_code=404, detail="Plan does not exist.")
-
-    @app.patch("/qgis/plans/{plan_id}")
-    def patch_plan(plan_id: str, body: PlanPatchRequest) -> dict[str, Any]:
-        try:
-            return active_runner.patch_plan(plan_id, body)
-        except PlanNotFoundError:
-            raise HTTPException(status_code=404, detail="Plan does not exist.")
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc))
-
-    @app.post("/qgis/plans/{plan_id}/reject")
-    def reject_plan(plan_id: str) -> dict[str, Any]:
-        try:
-            return active_runner.reject_plan(plan_id)
-        except PlanNotFoundError:
-            raise HTTPException(status_code=404, detail="Plan does not exist.")
-
-    @app.post("/qgis/plans/{plan_id}/run")
-    def run_plan(plan_id: str, body: PlanRunRequest | None = None) -> dict[str, Any]:
-        try:
-            return active_runner.run_plan(plan_id, body)
-        except PlanNotFoundError:
-            raise HTTPException(status_code=404, detail="Plan does not exist.")
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc))
 
     @app.post("/qgis/runs/{run_id}/resume")
     def resume_run(run_id: str, request: QGISAgentRequest) -> dict[str, Any]:

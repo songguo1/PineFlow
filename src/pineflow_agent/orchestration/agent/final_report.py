@@ -110,7 +110,6 @@ def build_final_report_markdown(
     trust = _trust_assessment(warnings=warnings, repairs=repairs or audit_repairs or repair_steps, outputs=outputs)
     runtime = dict(runtime_report or {})
     goal_contract = dict(result.goal_contract or {})
-    plan_context = dict(audit_payload.get("plan_context") or getattr(result, "plan_context", None) or {})
     lines = [
         "# PineFlow GIS Analysis Report",
         "",
@@ -120,7 +119,6 @@ def build_final_report_markdown(
         "## 目标契约",
         f"- 目标：{goal_contract.get('goal') or str(user_request or '').strip() or '-'}",
         f"- 来源：{goal_contract.get('source') or '未记录'}",
-        *([f"- Plan ID：{result.plan_id}"] if str(getattr(result, "plan_id", "") or "").strip() else []),
         *_goal_contract_lines(goal_contract),
         "",
         "## 结论",
@@ -187,7 +185,6 @@ def build_final_report_markdown(
         lines.append("- 未记录自动修复步骤。")
     lines.extend(["", "## 关键决策表"])
     decision_table = _decision_table_lines(
-        plan_context=plan_context,
         source_loads=source_loads,
         clarification_decisions=clarification_decisions,
         audit_decisions=audit_decisions,
@@ -211,7 +208,6 @@ def build_final_report_markdown(
         audit_decisions=audit_decisions,
         clarification_decisions=clarification_decisions,
         source_loads=source_loads,
-        plan_context=plan_context,
         audit_repairs=audit_repairs,
         warnings=warnings,
         empty_results=[dict(item) for item in list(audit_payload.get("empty_results") or []) if isinstance(item, dict)],
@@ -424,7 +420,6 @@ def _audit_items(steps: list[ReActStep], key: str) -> list[dict[str, Any]]:
 
 def _decision_table_lines(
     *,
-    plan_context: dict[str, Any] | None = None,
     source_loads: list[dict[str, Any]] | None = None,
     clarification_decisions: list[dict[str, Any]] | None = None,
     audit_decisions: list[dict[str, Any]],
@@ -434,22 +429,6 @@ def _decision_table_lines(
     exports: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     rows = ["| 类型 | 决策 | 依据 | 影响 |", "| --- | --- | --- | --- |"]
-    plan = dict(plan_context or {})
-    if plan:
-        assumptions = "；".join(str(item) for item in list(plan.get("approved_assumptions") or [])[:3] if str(item))
-        risks = "；".join(
-            str(item.get("message") or item.get("code") or "")
-            for item in list(plan.get("risk_preview") or [])[:2]
-            if isinstance(item, dict)
-        )
-        rows.append(
-            _decision_row(
-                "计划",
-                f"{plan.get('plan_id') or 'plan'} / {plan.get('status') or 'unknown'}",
-                assumptions or risks or "执行前计划确认。",
-                "固定目标、风险预览和确认假设。",
-            )
-        )
     for item in list(source_loads or []):
         alias = _source_load_label(item)
         slot_label = str(item.get("slot_label") or item.get("slot") or "数据源").strip()
@@ -570,16 +549,12 @@ def _audit_lines(
     audit_decisions: list[dict[str, Any]],
     clarification_decisions: list[dict[str, Any]] | None = None,
     source_loads: list[dict[str, Any]] | None = None,
-    plan_context: dict[str, Any] | None = None,
     audit_repairs: list[dict[str, Any]],
     warnings: list[dict[str, Any]],
     empty_results: list[dict[str, Any]] | None = None,
     exports: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     lines: list[str] = []
-    plan_lines = _plan_audit_lines(dict(plan_context or {}))
-    if plan_lines:
-        lines.extend(plan_lines)
     for item in list(source_loads or []):
         lines.append(f"- 数据补充：{str(item.get('message') or _source_load_fallback_text(item) or '已补充数据源。')}")
     for item in list(clarification_decisions or []):
@@ -676,26 +651,6 @@ def _audit_lines(
             suffix += f" 建议：{actions}。"
         lines.append(f"- 空结果诊断：{item.get('message') or item.get('code') or '结果为空，需要检查输入条件。'}{suffix}")
     return _dedupe_lines(lines)
-
-
-def _plan_audit_lines(plan_context: dict[str, Any]) -> list[str]:
-    if not plan_context:
-        return []
-    lines = [
-        f"- 计划确认：{plan_context.get('plan_id') or '未记录'}，状态 {plan_context.get('status') or '未记录'}。"
-    ]
-    assumptions = [str(item) for item in list(plan_context.get("approved_assumptions") or []) if str(item)]
-    if assumptions:
-        lines.append(f"- 已确认假设：{'；'.join(assumptions[:4])}。")
-    risks = [dict(item) for item in list(plan_context.get("risk_preview") or []) if isinstance(item, dict)]
-    if risks:
-        lines.append(
-            "- 计划风险预览："
-            + "；".join(str(item.get("message") or item.get("code") or "") for item in risks[:4] if item)
-            + "。"
-        )
-    return lines
-
 
 def _decision_row(kind: str, decision: str, evidence: str, impact: str) -> str:
     return f"| {_table_text(kind)} | {_table_text(decision)} | {_table_text(evidence)} | {_table_text(impact)} |"

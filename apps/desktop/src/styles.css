@@ -135,7 +135,7 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 }
 .brand span, .muted { color: var(--muted); font-size: 12px; }
 .top-actions { gap: 8px; }
-.top-actions button, .source-actions button, .output button, .file-state-actions button, .primary, .resume-action-row button, .plan-draft-actions button, .segmented button, .path-picker button, .collapse-button {
+.top-actions button, .source-actions button, .output button, .file-state-actions button, .primary, .resume-action-row button, .segmented button, .path-picker button, .collapse-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -150,7 +150,7 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   font-weight: 750;
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
 }
-.top-actions button:hover, .source-actions button:hover, .output button:hover, .file-state-actions button:hover, .resume-action-row button:hover, .plan-draft-actions button:hover, .segmented button:hover, .path-picker button:hover, .collapse-button:hover {
+.top-actions button:hover, .source-actions button:hover, .output button:hover, .file-state-actions button:hover, .resume-action-row button:hover, .segmented button:hover, .path-picker button:hover, .collapse-button:hover {
   border-color: rgba(15, 118, 110, 0.45);
   background: #f4fbf9;
   color: var(--accent);
@@ -1621,55 +1621,6 @@ pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
   background: #ffffff;
   padding: 10px 14px;
 }
-.plan-draft {
-  margin: 0;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  display: grid;
-  gap: 12px;
-}
-.plan-draft-head {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: start;
-}
-.plan-draft-head svg { color: var(--accent); margin-top: 2px; }
-.plan-draft-head span, .plan-draft-section span {
-  display: block;
-  color: var(--muted);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0;
-}
-.plan-draft-head h2 {
-  margin: 2px 0 0;
-  font-size: 14px;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-.plan-draft-head code {
-  font-size: 11px;
-  color: var(--muted);
-}
-.plan-draft-section ul {
-  margin: 6px 0 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 4px;
-}
-.plan-draft-section li {
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--text);
-}
-.plan-draft-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 .timeline-card {
   display: grid;
   justify-self: start;
@@ -2214,7 +2165,6 @@ button.choice-chip:hover {
   min-width: 0;
 }
 .composer-icon-button,
-.composer-review-button,
 .composer-compact-action,
 .composer-send-button {
   display: inline-flex;
@@ -2234,24 +2184,6 @@ button.choice-chip:hover {
 .composer-icon-button:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
-}
-.composer-review-button {
-  gap: 8px;
-  min-height: 32px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #e5e7eb;
-  padding: 0 12px;
-  font-size: 12px;
-  font-weight: 800;
-}
-.composer-review-button:hover:not(:disabled),
-.composer-review-button.active {
-  background: rgba(255, 255, 255, 0.14);
-  color: #ffffff;
-}
-.composer-review-button svg:last-child {
-  color: #a1a1aa;
 }
 .composer-actions {
   display: inline-flex;
@@ -3754,7 +3686,6 @@ button.choice-chip:hover {
 }
 
 .composer-icon-button,
-.composer-review-button,
 .composer-compact-action,
 .composer-model-chip {
   border-color: #d5e1dd;
@@ -3763,15 +3694,12 @@ button.choice-chip:hover {
 }
 
 .composer-icon-button:hover:not(:disabled),
-.composer-review-button:hover:not(:disabled),
-.composer-review-button.active,
 .composer-compact-action:hover:not(:disabled) {
   border-color: #95c9c0;
   background: #eef8f5;
   color: #167c73;
 }
 
-.composer-review-button svg:last-child,
 .composer-model-detail {
   color: #6b7b8d;
 }

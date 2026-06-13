@@ -4,8 +4,6 @@ export function normalizeResult(value) {
   const fileState = normalizeFileState(result.file_state || {});
   return {
     session_id: String(result.session_id || ""),
-    plan_id: String(result.plan_id || ""),
-    plan_context: result.plan_context && typeof result.plan_context === "object" ? result.plan_context : {},
     status: String(result.status || "idle"),
     final_message: String(result.final_message || ""),
     completion_summary: String(result.completion_summary || ""),

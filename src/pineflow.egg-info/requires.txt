@@ -1,0 +1,7 @@
+fastapi>=0.110
+pydantic>=2
+PyYAML>=6
+uvicorn>=0.29
+
+[dev]
+pytest>=8

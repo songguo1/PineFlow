@@ -2,7 +2,6 @@
 name: crs_selection
 description: "CRS选择指南：UTM分带规则、中国常用投影、Web Mercator适用场景。当用户需要选择或变更图层坐标系时使用。"
 requires_toolkits: [vector_transform]
-trigger_keywords: ["crs", "坐标系", "投影", "EPSG", "reproject", "重投影", "utm", "经纬度", "wgs84"]
 max_chars: 650
 ---
 

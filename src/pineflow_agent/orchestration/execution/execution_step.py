@@ -189,6 +189,8 @@ def record_observation_step(
             message=str(warning.get("message") or warning.get("code") or "Postflight warning."),
         )
 
+    _attach_observation_summary(plan, observation)
+
     steps.append(
         ReActStep(
             index=index,
@@ -352,6 +354,66 @@ def _attach_ux_summary(
     data = dict(observation.data or {})
     data["ux_summary"] = text
     observation.data = data
+
+
+def _attach_observation_summary(plan: ActionPlan, observation: Observation) -> None:
+    data = dict(observation.data or {})
+    layer = data.get("layer") if isinstance(data.get("layer"), dict) else {}
+    metadata = dict(layer.get("metadata") or {}) if isinstance(layer, dict) else {}
+    output_artifact = data.get("output_artifact") if isinstance(data.get("output_artifact"), dict) else {}
+    warnings = []
+    for key in ("preflight_warnings", "postflight_warnings", "warnings", "quality_findings"):
+        for item in list(data.get(key) or []):
+            if not isinstance(item, dict):
+                continue
+            warnings.append(
+                {
+                    "source": key,
+                    "code": str(item.get("code") or ""),
+                    "severity": str(item.get("severity") or ""),
+                    "message": str(item.get("message") or ""),
+                }
+            )
+    summary = {
+        "action": plan.action,
+        "status": observation.status,
+        "message": observation.message,
+        "output_layer_id": observation.output_layer_id,
+        "output_path": observation.output_path,
+        "layer": {
+            "layer_id": str(layer.get("layer_id") or ""),
+            "name": str(layer.get("name") or ""),
+            "kind": str(layer.get("kind") or ""),
+            "crs": str(metadata.get("crs") or ""),
+            "geometry_type": str(metadata.get("geometry_type") or ""),
+            "feature_count": metadata.get("feature_count"),
+            "row_count": metadata.get("row_count"),
+            "field_count": metadata.get("field_count"),
+        },
+        "artifact": {
+            "artifact_id": str(output_artifact.get("artifact_id") or ""),
+            "role": str(output_artifact.get("role") or ""),
+            "name": str(output_artifact.get("name") or ""),
+            "path": str(output_artifact.get("path") or ""),
+        },
+        "warnings": warnings[:8],
+        "timing": dict(data.get("timing") or {}),
+    }
+    data["observation_summary"] = _drop_empty_summary_values(summary)
+    observation.data = data
+
+
+def _drop_empty_summary_values(value: Any) -> Any:
+    if isinstance(value, dict):
+        result = {
+            key: _drop_empty_summary_values(item)
+            for key, item in value.items()
+            if item not in ("", None, [], {})
+        }
+        return {key: item for key, item in result.items() if item not in ("", None, [], {})}
+    if isinstance(value, list):
+        return [_drop_empty_summary_values(item) for item in value if item not in ("", None, [], {})]
+    return value
 
 
 def _key_event_message(

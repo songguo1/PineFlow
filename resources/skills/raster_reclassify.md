@@ -2,7 +2,6 @@
 name: raster_reclassify
 description: "栅格重分类：使用查找表对栅格值重新分类。当用户需要对栅格做重分类或分级时，必须先加载此技能。"
 requires_toolkits: [raster, vector_analysis]
-trigger_keywords: ["重分类", "reclassify", "reclass", "分级", "栅格分类", "reclassification"]
 max_chars: 600
 ---
 

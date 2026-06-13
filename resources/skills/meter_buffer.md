@@ -2,10 +2,6 @@
 name: meter_buffer
 description: "米制距离缓冲：确保在投影坐标系下执行缓冲。当用户要求以米或公里为单位做缓冲区时，必须先加载此技能。"
 requires_toolkits: [vector_transform, vector_analysis]
-trigger_keywords: ["buffer", "缓冲", "米", "公里", "meter", "kilometer", "距离", "distance"]
-intent_patterns:
-  - metric_buffer
-  - distance_analysis
 workspace_attention:
   - input_crs
   - layer_extent

@@ -2,7 +2,6 @@
 name: spatial_join
 description: "空间连接：连接方向选择、字段冲突处理、一对多膨胀检查。当用户需要将两个图层的属性按空间关系合并时使用。"
 requires_toolkits: [vector_analysis]
-trigger_keywords: ["join", "连接", "关联", "spatial join", "空间连接", "归属", "落入", "包含"]
 max_chars: 650
 ---
 

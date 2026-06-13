@@ -140,8 +140,6 @@ class AgentResult:
     pending_task: PendingTask | None = None
     repair: RepairProposal | None = None
     goal_contract: dict[str, Any] = field(default_factory=dict)
-    plan_id: str = ""
-    plan_context: dict[str, Any] = field(default_factory=dict)
     quality_findings: list[dict[str, Any]] = field(default_factory=list)
     report_audit: dict[str, Any] = field(default_factory=dict)
 
@@ -181,8 +179,6 @@ class AgentResult:
             "pending_task": self.pending_task.to_dict() if self.pending_task else {},
             "repair": self.repair.to_dict() if self.repair else {},
             "goal_contract": make_json_safe(dict(self.goal_contract or {})),
-            "plan_id": self.plan_id,
-            "plan_context": make_json_safe(dict(self.plan_context or {})),
             "quality_findings": make_json_safe(list(self.quality_findings or [])),
             "report_audit": make_json_safe(dict(self.report_audit or {})),
         }

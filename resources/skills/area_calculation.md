@@ -2,7 +2,6 @@
 name: area_calculation
 description: "面积计算：投影坐标系面积 vs 地理坐标系面积的差异。当用户需要计算面积时使用。"
 requires_toolkits: [vector_transform, vector_analysis]
-trigger_keywords: ["area", "面积", "计算面积", "sqm", "平方米", "公顷", "hectare", "平方公里"]
 max_chars: 600
 ---
 
