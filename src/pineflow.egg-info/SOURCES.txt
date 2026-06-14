@@ -26,6 +26,7 @@ src/pineflow_agent/llm/context_builder.py
 src/pineflow_agent/llm/llm.py
 src/pineflow_agent/llm/model_adapters.py
 src/pineflow_agent/llm/prompts.py
+src/pineflow_agent/llm/step_context_pack.py
 src/pineflow_agent/orchestration/__init__.py
 src/pineflow_agent/orchestration/event_stream.py
 src/pineflow_agent/orchestration/session_memory.py
@@ -172,7 +173,6 @@ src/pineflow_api/application/__init__.py
 src/pineflow_api/application/agent_runtime_factory.py
 src/pineflow_api/application/completion_summary.py
 src/pineflow_api/application/execution.py
-src/pineflow_api/application/plan_service.py
 src/pineflow_api/application/qgis_launcher.py
 src/pineflow_api/application/qgis_runtime_info.py
 src/pineflow_api/application/qgis_runtime_proxy.py
@@ -190,7 +190,6 @@ src/pineflow_api/contracts/__init__.py
 src/pineflow_api/contracts/decision_rows.py
 src/pineflow_api/contracts/models.py
 src/pineflow_api/contracts/pending_tasks.py
-src/pineflow_api/contracts/plans.py
 src/pineflow_api/contracts/run_control.py
 src/pineflow_api/contracts/run_events.py
 src/pineflow_api/contracts/run_lifecycle.py
@@ -203,7 +202,6 @@ src/pineflow_api/entrypoints/worker.py
 src/pineflow_api/persistence/__init__.py
 src/pineflow_api/persistence/event_repository.py
 src/pineflow_api/persistence/legacy_sessions.py
-src/pineflow_api/persistence/plans.py
 src/pineflow_api/persistence/run_repository.py
 src/pineflow_api/persistence/session_projector.py
 src/pineflow_api/persistence/session_read_model.py

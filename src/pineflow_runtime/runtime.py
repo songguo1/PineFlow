@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import os
 import sys
+import tempfile
 from urllib.parse import quote
 from dataclasses import dataclass
 from pathlib import Path
@@ -75,6 +76,21 @@ def _call_or_default(obj: Any, method_name: str, default: Any, *args: Any) -> An
         return default
 
 
+def _qgis_auth_db_dir() -> str:
+    configured = str(os.environ.get("QGIS_AUTH_DB_DIR_PATH") or "").strip()
+    candidates: list[Path] = []
+    if configured:
+        candidates.append(Path(configured))
+    candidates.append(Path(tempfile.gettempdir()) / "pineflow-qgis-auth")
+    for candidate in candidates:
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+            return str(candidate)
+        except OSError:
+            continue
+    return str(candidates[-1])
+
+
 class QGISRuntime:
     """Manage one in-process PyQGIS runtime for the MCP service."""
 
@@ -90,6 +106,7 @@ class QGISRuntime:
         self._prepare_import_paths(prefix_path)
         modules = self._import_qgis_modules()
         modules.QgsApplication.setPrefixPath(prefix_path, True)
+        modules.QgsApplication.setAuthDatabaseDirPath(_qgis_auth_db_dir())
         app = modules.QgsApplication([], False)
         app.initQgis()
         modules.Processing.initialize()

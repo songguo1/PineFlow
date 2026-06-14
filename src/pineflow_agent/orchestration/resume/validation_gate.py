@@ -58,9 +58,9 @@ class ValidationGate:
     ) -> ValidationPause | None:
         if not issues:
             return None
-        primary_issue = issues[0]
         risks = risks_from_issues(issues, tool_name=plan.action, state_tree=self.state_tree)
         decision = RiskPolicy().evaluate(risks)
+        primary_issue = _primary_issue_for_decision(issues, risks, decision)
         autonomy_decision = AutonomyPolicy().decide_validation_issue(
             plan=plan,
             issue=primary_issue,
@@ -295,6 +295,17 @@ def _attach_autonomy_decision(risks: list[GISRisk], autonomy_decision: AutonomyD
         diagnosis = dict(risk.diagnosis or {})
         diagnosis["autonomy_policy"] = payload
         risk.diagnosis = diagnosis
+
+
+def _primary_issue_for_decision(
+    issues: list[ValidationIssue],
+    risks: list[GISRisk],
+    decision: RiskDecision,
+) -> ValidationIssue:
+    for issue, risk in zip(issues, risks):
+        if risk is decision.primary_risk:
+            return issue
+    return issues[0]
 
 
 def pending_task_from_issue(

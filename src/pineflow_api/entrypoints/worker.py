@@ -25,8 +25,10 @@ def main() -> None:
     prefix_path = str(dict(payload.get("qgis") or {}).get("prefix_path") or "").strip()
     if prefix_path:
         os.environ["QGIS_PREFIX_PATH"] = prefix_path
-    runtime = QGISRuntime(prefix_path=prefix_path or None)
+    runtime: QGISRuntime | None = None
     try:
+        with redirect_stdout(sys.stderr):
+            runtime = QGISRuntime(prefix_path=prefix_path or None)
         result = _dispatch_silenced(runtime, payload)
         _write({"ok": True, "result": result})
     except (QGISRuntimeError, ToolExecutionError, ToolValidationError) as exc:
@@ -50,13 +52,16 @@ def main() -> None:
         )
         sys.exit(1)
     finally:
-        runtime.shutdown()
+        if runtime is not None:
+            runtime.shutdown()
 
 
 def _run_loop() -> None:
     prefix_path = str(os.environ.get("QGIS_PREFIX_PATH") or "").strip()
-    runtime = QGISRuntime(prefix_path=prefix_path or None)
+    runtime: QGISRuntime | None = None
     try:
+        with redirect_stdout(sys.stderr):
+            runtime = QGISRuntime(prefix_path=prefix_path or None)
         for line in sys.stdin:
             raw = str(line or "").lstrip("\ufeff").strip()
             if not raw:
@@ -89,7 +94,8 @@ def _run_loop() -> None:
                     }
                 )
     finally:
-        runtime.shutdown()
+        if runtime is not None:
+            runtime.shutdown()
 
 
 def _dispatch_silenced(runtime: QGISRuntime, payload: dict[str, Any]) -> Any:

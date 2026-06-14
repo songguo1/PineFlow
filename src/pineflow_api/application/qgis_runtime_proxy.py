@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import tempfile
 import threading
 from pathlib import Path
 from threading import Lock
@@ -106,26 +107,11 @@ class SubprocessQGISRuntime:
         try:
             process.stdin.write(json.dumps(payload, ensure_ascii=False) + "\n")
             process.stdin.flush()
-            output = str(process.stdout.readline() or "").strip()
+            value = self._read_json_response(process, payload)
         except (BrokenPipeError, OSError) as exc:
             self._shutdown_locked()
             raise QGISRuntimeError(
                 "QGIS runtime worker stopped before returning a response.",
-                data={"operation": payload.get("operation") or ""},
-            ) from exc
-        if not output:
-            return_code = process.poll()
-            stderr = self._worker_stderr_tail()
-            self._shutdown_locked()
-            raise QGISRuntimeError(
-                stderr or f"QGIS runtime worker returned empty output with code {return_code}.",
-                data={"operation": payload.get("operation") or "", "return_code": return_code},
-            )
-        try:
-            value = json.loads(output)
-        except json.JSONDecodeError as exc:
-            raise QGISRuntimeError(
-                f"QGIS runtime worker returned invalid JSON: {output[:300]}",
                 data={"operation": payload.get("operation") or ""},
             ) from exc
         if not isinstance(value, dict):
@@ -143,6 +129,32 @@ class SubprocessQGISRuntime:
         if error_type == "ToolExecutionError":
             raise ToolExecutionError(message, data=data)
         raise QGISRuntimeError(message, data=data)
+
+    def _read_json_response(self, process: subprocess.Popen[str], payload: dict[str, Any]) -> Any:
+        assert process.stdout is not None
+        for _ in range(50):
+            output = str(process.stdout.readline() or "").strip()
+            if not output:
+                return_code = process.poll()
+                stderr = self._worker_stderr_tail()
+                self._shutdown_locked()
+                raise QGISRuntimeError(
+                    stderr or f"QGIS runtime worker returned empty output with code {return_code}.",
+                    data={"operation": payload.get("operation") or "", "return_code": return_code},
+                )
+            try:
+                return json.loads(output)
+            except json.JSONDecodeError:
+                # Some QGIS launchers/providers print startup diagnostics to stdout.
+                # Keep the worker protocol resilient by treating non-JSON lines as diagnostics.
+                self._stderr_tail.append(output)
+                del self._stderr_tail[:-20]
+                continue
+        stderr = self._worker_stderr_tail()
+        raise QGISRuntimeError(
+            stderr or "QGIS runtime worker returned too many non-JSON lines.",
+            data={"operation": payload.get("operation") or ""},
+        )
 
     def _ensure_process_locked(self) -> subprocess.Popen[str]:
         if self._process is not None and self._process.poll() is None:
@@ -198,12 +210,28 @@ class SubprocessQGISRuntime:
         env = os.environ.copy()
         if self.prefix_path:
             env["QGIS_PREFIX_PATH"] = self.prefix_path
+        if not str(env.get("QGIS_AUTH_DB_DIR_PATH") or "").strip():
+            env["QGIS_AUTH_DB_DIR_PATH"] = self._default_auth_db_dir()
         src_path = self._source_root()
         python_path = str(env.get("PYTHONPATH") or "")
         entries = [item for item in python_path.split(os.pathsep) if item]
         if src_path not in entries:
             env["PYTHONPATH"] = os.pathsep.join([src_path, *entries])
         return env
+
+    @classmethod
+    def _default_auth_db_dir(cls) -> str:
+        candidates = [
+            Path(tempfile.gettempdir()) / "pineflow-qgis-auth",
+            Path(cls._source_root()).parent / ".pineflow" / "qgis-auth",
+        ]
+        for candidate in candidates:
+            try:
+                candidate.mkdir(parents=True, exist_ok=True)
+                return str(candidate)
+            except OSError:
+                continue
+        return str(candidates[0])
 
     @staticmethod
     def _source_root() -> str:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from pineflow_agent.risks.models import GISRisk, RiskDecision
 
 
@@ -12,13 +14,26 @@ class RiskPolicy:
         ordered = tuple(risks or ())
         if not ordered:
             return RiskDecision("proceed")
-        primary = ordered[0]
-        if primary.suggested_choices:
-            return RiskDecision("ask_disambiguation", primary, ordered)
-        if primary.confirmation_required:
-            return RiskDecision("ask_confirmation", primary, ordered)
-        if primary.auto_repair_available and primary.repair_action and not primary.confirmation_required:
-            return RiskDecision("auto_repair", primary, ordered)
-        if primary.blocking or primary.severity == "error":
-            return RiskDecision("ask_user", primary, ordered)
-        return RiskDecision("warn", primary, ordered)
+        disambiguation = _first_matching(ordered, lambda risk: bool(risk.suggested_choices))
+        if disambiguation:
+            return RiskDecision("ask_disambiguation", disambiguation, ordered)
+        confirmation = _first_matching(ordered, lambda risk: bool(risk.confirmation_required))
+        if confirmation:
+            return RiskDecision("ask_confirmation", confirmation, ordered)
+        auto_repair = _first_matching(
+            ordered,
+            lambda risk: bool(risk.auto_repair_available and risk.repair_action and not risk.confirmation_required),
+        )
+        if auto_repair:
+            return RiskDecision("auto_repair", auto_repair, ordered)
+        blocking = _first_matching(ordered, lambda risk: bool(risk.blocking or risk.severity == "error"))
+        if blocking:
+            return RiskDecision("ask_user", blocking, ordered)
+        return RiskDecision("warn", ordered[0], ordered)
+
+
+def _first_matching(risks: tuple[GISRisk, ...], predicate: Callable[[GISRisk], bool]) -> GISRisk | None:
+    for risk in risks:
+        if predicate(risk):
+            return risk
+    return None
